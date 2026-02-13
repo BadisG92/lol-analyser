@@ -227,9 +227,21 @@ struct AnalysisCardView: View {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             if trimmed.isEmpty { continue }
 
+            // Strip leading markdown bold markers (**), emojis, and other
+            // non-letter characters so that "**🚨 SITUATION**" matches the
+            // keyword "SITUATION". Without this, the hasPrefix check fails
+            // because Claude's response wraps headers in ** and emoji prefixes.
+            let stripped = String(
+                trimmed.drop { !$0.isASCII || !$0.isLetter }
+            )
+            .trimmingCharacters(in: .whitespaces)
+            // Also remove trailing ** if present
+            .replacingOccurrences(of: "**", with: "")
+            .trimmingCharacters(in: .whitespaces)
+
             var matched = false
             for pattern in patterns {
-                if trimmed.uppercased().hasPrefix(pattern.keyword) {
+                if stripped.uppercased().hasPrefix(pattern.keyword) {
                     // Flush previous section
                     if let current = currentMatch, !currentContent.isEmpty {
                         sections.append(CoachingSection(

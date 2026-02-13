@@ -138,7 +138,12 @@ final class GameViewModel {
                     coachingText += chunk.text
 
                 case .done(let done):
-                    gameId = done.gameId
+                    // Only update gameId if the server provided one (init returns
+                    // game_id; mid-game analyze does not). Setting it to nil here
+                    // would break subsequent analyzeScreenshot() calls.
+                    if let newGameId = done.gameId {
+                        gameId = newGameId
+                    }
                     gamePhase = done.phase
 
                     // Build the analysis from accumulated data
@@ -162,6 +167,18 @@ final class GameViewModel {
                     error = err.message
                     isLoading = false
                     isStreaming = false
+                }
+            }
+
+            // The stream ended normally (loop exhausted). If isLoading is still
+            // true, the server closed the connection without sending a "done" or
+            // "error" event (e.g. network drop handled gracefully by URLSession).
+            // Reset the loading state so the UI doesn't spin forever.
+            if isLoading {
+                isLoading = false
+                isStreaming = false
+                if error == nil {
+                    error = "Connexion interrompue. Veuillez réessayer."
                 }
             }
         } catch {

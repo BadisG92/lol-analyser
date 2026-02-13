@@ -99,6 +99,7 @@ game.post("/init", async (c) => {
 
           const playerRank = playerDataMap.get(playerInfo.name)?.summoner.rank ?? "Gold";
           let fullCoaching = "";
+          let streamingError = false;
 
           await streamGameInitCoaching(
             anthropic,
@@ -118,10 +119,15 @@ game.post("/init", async (c) => {
               },
               onDone: () => {},
               onError: (error) => {
+                streamingError = true;
                 send("error", { message: error.message });
               },
             }
           );
+
+          // If the coaching stream failed, don't save partial data or
+          // send a "done" event — the client already received "error".
+          if (streamingError) return;
 
           // Step 6: Save session with first analysis
           const analysis: ScreenshotAnalysis = {
@@ -236,6 +242,7 @@ game.post("/:id/analyze", async (c) => {
           }));
 
           let fullCoaching = "";
+          let streamingError = false;
 
           await streamMidGameCoaching(
             anthropic,
@@ -256,10 +263,15 @@ game.post("/:id/analyze", async (c) => {
               },
               onDone: () => {},
               onError: (error) => {
+                streamingError = true;
                 send("error", { message: error.message });
               },
             }
           );
+
+          // If the coaching stream failed, don't save partial data or
+          // send a "done" event — the client already received "error".
+          if (streamingError) return;
 
           // Step 4: Save analysis
           const analysis: ScreenshotAnalysis = {

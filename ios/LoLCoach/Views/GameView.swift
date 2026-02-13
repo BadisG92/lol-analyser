@@ -343,11 +343,20 @@ struct GameView: View {
     // MARK: - Helpers
 
     private var currentExtraction: TabScreenExtraction? {
-        gameViewModel.currentExtraction ?? gameViewModel.analyses.last?.extraction
+        // In review mode, gameViewModel is empty — use the session's data instead.
+        if isReview {
+            return session?.latestAnalysis?.extraction
+        }
+        return gameViewModel.currentExtraction ?? gameViewModel.analyses.last?.extraction
     }
 
     private var currentPhaseDisplay: String {
-        let phase = gameViewModel.analyses.last?.gamePhase ?? .early
+        let phase: GamePhase
+        if isReview {
+            phase = session?.latestAnalysis?.gamePhase ?? .early
+        } else {
+            phase = gameViewModel.analyses.last?.gamePhase ?? .early
+        }
         return phase.displayName
     }
 
