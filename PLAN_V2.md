@@ -17,7 +17,7 @@ AVANT LA GAME (loading screen / champ select)
 │
 ├─ L'utilisateur donne son Riot ID (une seule fois, sauvegardé)
 ├─ L'app détecte la game (via screenshot ou input manuel)
-├─ FETCH UNIQUE : Riot API + OP.GG pour les 10 joueurs
+├─ FETCH UNIQUE : OP.GG MCP pour les 10 joueurs (pas de Riot API)
 ├─ L'IA donne un PLAN DE JEU INITIAL :
 │   ├─ Build complet recommandé (item path)
 │   ├─ Ordre de sorts (skill order)
@@ -121,21 +121,31 @@ Le joueur fera : screenshot iOS → partage vers l'app OU galerie → import.
 │  - Rate limiting par user (5 analyses gratuites/jour)         │
 │  - Request validation                                        │
 │  - Image upload → R2 (Cloudflare storage)                    │
-└───────────┬──────────────┬──────────────────┬───────────────┘
-            │              │                  │
-            ▼              ▼                  ▼
-   ┌────────────┐  ┌──────────────┐  ┌──────────────────┐
-   │ Claude API │  │  Riot API    │  │  OP.GG MCP       │
-   │ (Vision +  │  │  (Player     │  │  (Meta, builds,  │
-   │  Coaching) │  │   data)      │  │   counters)      │
-   └────────────┘  └──────────────┘  └──────────────────┘
-                          │
-                   ┌──────┴──────┐
-                   │ DDragon /   │
-                   │ CDragon     │
-                   │ (Static)    │
-                   └─────────────┘
+└───────────┬──────────────────────────────┬──────────────────┘
+            │                              │
+            ▼                              ▼
+   ┌────────────┐              ┌──────────────────────┐
+   │ Claude API │              │  OP.GG MCP           │
+   │ (Vision +  │              │  (Players, meta,     │
+   │  Coaching) │              │   builds, counters,  │
+   │            │              │   match history)     │
+   └────────────┘              └──────────────────────┘
+                                         │
+                                  ┌──────┴──────┐
+                                  │ DDragon /   │
+                                  │ CDragon     │
+                                  │ (Static)    │
+                                  └─────────────┘
 ```
+
+**NOTE V3 : Riot API complètement retirée.** OP.GG MCP couvre tous les besoins :
+- Données joueurs (rank, LP, win rate) via `lol-summoner-search`
+- Match history via `lol-summoner-game-history`
+- Builds/runes/counters via `lol-champion-analysis`
+- Meta/tier list via `lol-champion-meta-data`
+- Autofill detection via `lol-champion-positions-data`
+
+Avantages : pas de clé API, pas de rate limiting strict, données déjà agrégées.
 
 ### Pourquoi Hono + Cloudflare Workers (pas Express/Node)
 
@@ -149,7 +159,7 @@ Le joueur fera : screenshot iOS → partage vers l'app OU galerie → import.
 | SSE support | Natif | Natif |
 | Global latency | Un seul datacenter | 300+ edge locations |
 
-### Orchestration des appels API (flow optimisé)
+### Orchestration des appels API (flow optimisé — sans Riot API)
 
 ```
 GAME INIT (une seule fois) :
@@ -158,20 +168,17 @@ GAME INIT (une seule fois) :
 │    └─> Extrait les 10 noms de joueurs + champions       │
 │                                                         │
 │ 2. EN PARALLÈLE (Promise.all) :                         │
-│    ├─> 10x Riot API: account lookup (PUUID)             │
-│    ├─> OP.GG MCP: champion-analysis pour chaque champ   │
-│    ├─> OP.GG MCP: champion-meta-data (builds optimaux)  │
+│    ├─> 10x OP.GG MCP: lol-summoner-search (rank, stats) │
+│    ├─> 10x OP.GG MCP: lol-summoner-game-history         │
+│    ├─> 10x OP.GG MCP: lol-champion-analysis (builds)    │
+│    ├─> OP.GG MCP: lol-champion-positions-data (autofill)│
 │    └─> DDragon: patch version + item data (caché 24h)   │
 │                                                         │
-│ 3. EN PARALLÈLE (après les PUUIDs) :                    │
-│    ├─> 10x Riot API: ranked data                        │
-│    ├─> 10x Riot API: match history (5 derniers matchs)  │
-│    └─> 10x Riot API: champion mastery                   │
-│                                                         │
-│ 4. Claude coaching: plan de jeu initial (SSE stream)    │
+│ 3. Claude coaching: plan de jeu initial (SSE stream)    │
 │    └─> Contexte = tout ce qui précède                   │
 └─────────────────────────────────────────────────────────┘
-Total API calls: ~1 Claude Vision + 40-50 Riot API + 10 OP.GG MCP + 1 Claude coaching
+Total: 1 Claude Vision + ~30 OP.GG MCP + 1 DDragon + 1 Claude coaching
+PAS DE RIOT API. Zéro clé à gérer.
 
 SCREENSHOTS SUIVANTS (pendant la game) :
 ┌─────────────────────────────────────────────────────────┐
@@ -182,33 +189,19 @@ SCREENSHOTS SUIVANTS (pendant la game) :
 │ 2. Claude coaching (SSE stream)                         │
 │    └─> Contexte = données initiales + TOUTES les        │
 │        analyses précédentes (conversation thread)       │
-│    └─> PAS de nouveaux appels Riot API                  │
+│    └─> PAS de nouveaux appels OP.GG                    │
 └─────────────────────────────────────────────────────────┘
-Total API calls: 1 Claude Vision + 1 Claude coaching (RAPIDE)
+Total: 1 Claude Vision + 1 Claude coaching (ULTRA RAPIDE ~3-8s)
 ```
 
-### Rate limiting Riot API : calcul exact
-
-```
-Dev key  : 100 req / 2 min = 50 req/min
-Init     : ~40-50 calls par game init
-Capacité : ~1 game init par 2 minutes avec dev key
-
-Prod key : ~300 req/s ≈ 18000 req/min
-Init     : ~40-50 calls par game init
-Capacité : ~360 game inits par minute ≈ 21,600 par heure
-```
-
-**Stratégie de cache** :
+### Stratégie de cache
 
 | Donnée | TTL Cache | Pourquoi |
 |--------|-----------|----------|
 | DDragon (items, champions) | 24h | Change seulement au patch |
 | OP.GG meta/builds | 6h | Évolue lentement |
-| Ranked data joueur | 1h | Peut changer après chaque game |
-| Match history | 30min | Nouvelles games |
-| Account PUUID | 30 jours | Ne change jamais |
-| Champion mastery | 24h | Change lentement |
+| OP.GG summoner data | 30min | Peut changer après chaque game |
+| OP.GG champion analysis | 12h | Builds stables sur un patch |
 
 ### Sécurité MVP
 
@@ -651,38 +644,19 @@ Auth   : AUCUNE (gratuit)
 | `lol-champion-positions-data` | Win rate par rôle | Détection autofill |
 | `lol-champion-leader-board` | Top players par champion | Contexte optionnel |
 
-**Impact** : L'OP.GG MCP couvre une grande partie de ce que la Riot API fournit, SANS rate limiting strict et SANS clé API. Ça peut remplacer partiellement la Riot API pour le MVP.
+**V3 UPDATE** : L'OP.GG MCP couvre TOUT ce dont on a besoin. Riot API retirée du MVP.
+On pourra l'ajouter plus tard si besoin de données granulaires (timelines, gold/xp par minute).
 
-### Riot API (données joueur précises)
-
-```
-Account  : GET https://{region}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{name}/{tag}
-Ranked   : GET https://{platform}.api.riotgames.com/lol/league/v4/entries/by-summoner/{id}
-Matches  : GET https://{region}.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids
-Match    : GET https://{region}.api.riotgames.com/lol/match/v5/matches/{matchId}
-Mastery  : GET https://{platform}.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}/top
-```
-- Auth : API Key obligatoire (header `X-Riot-Token`)
-- Dev key : 20 req/s + 100 req/2min (expire toutes les 24h)
-- Prod key : ~300 req/s (demande via developer.riotgames.com avec prototype)
-
-### Stratégie recommandée pour le MVP
+### Stratégie data (simplifiée)
 
 ```
-PRIORITÉ 1 (sans Riot API key) :
-├── OP.GG MCP pour les données joueurs → GRATUIT, pas de key
-├── DDragon/CDragon pour les données statiques → GRATUIT
-└── Claude pour l'analyse et le coaching → PAYANT
+SEULES SOURCES NÉCESSAIRES :
+├── OP.GG MCP : données joueurs + meta + builds + counters → GRATUIT
+├── DDragon/CDragon : données statiques (items, champions, patch) → GRATUIT
+└── Claude API : analyse d'image + coaching → PAYANT (seul coût)
 
-PRIORITÉ 2 (avec Riot API dev key) :
-├── Riot API pour enrichir avec match history détaillé
-├── Champion mastery precise
-└── Timeline data (gold/xp par minute)
-
-PRIORITÉ 3 (avec Riot API prod key) :
-├── Toutes les données Riot disponibles
-├── Rate limits confortables
-└── Scaling pour milliers d'utilisateurs
+OPTIONNEL (futur) :
+└── Riot API : si besoin de timelines, gold/xp par minute, données très granulaires
 ```
 
 ---
@@ -704,7 +678,6 @@ lol-analyser/
 │   │   ├── services/
 │   │   │   ├── vision.ts             # Claude Vision (extraction TAB)
 │   │   │   ├── coach.ts              # Claude coaching (streaming SSE)
-│   │   │   ├── riot-api.ts           # Client Riot API
 │   │   │   ├── opgg.ts               # Client OP.GG MCP
 │   │   │   ├── game-data.ts          # DDragon/CDragon (items, champions)
 │   │   │   └── cache.ts              # Cloudflare KV cache layer
@@ -714,7 +687,7 @@ lol-analyser/
 │   │   │   └── system.ts             # System prompt avec données meta
 │   │   ├── types/
 │   │   │   ├── game.ts               # Types game, player, analysis
-│   │   │   ├── riot.ts               # Types Riot API responses
+│   │   │   ├── opgg.ts               # Types OP.GG MCP responses
 │   │   │   └── coach.ts              # Types coaching output
 │   │   └── middleware/
 │   │       ├── auth.ts               # JWT verification
@@ -841,8 +814,6 @@ Response: SSE stream
 - [ ] Onboarding
 - [ ] TestFlight beta
 - [ ] App Store submission
-- [ ] Riot API production key request
-
 ---
 
 ## 11. Risques et décisions ouvertes
@@ -853,7 +824,7 @@ Response: SSE stream
 | IA extraction | Haiku vs Sonnet | **Haiku 4.5** | Suffisant pour OCR, 3-5x moins cher |
 | IA coaching | Sonnet vs Opus | **Sonnet 4.5** | Bon rapport qualité/prix, streaming rapide |
 | Auth | Apple Sign In vs Email/Password | **Apple Sign In** | Obligatoire iOS si compte, zéro friction |
-| Data joueurs MVP | Riot API vs OP.GG MCP | **OP.GG MCP d'abord** | Pas de clé API, pas de rate limit, MVP plus rapide |
+| Data joueurs | ~~Riot API~~ vs OP.GG MCP | **OP.GG MCP uniquement** | Couvre tout, gratuit, pas de clé, pas de rate limit |
 | Stockage local | SwiftData vs UserDefaults | **SwiftData** | Données structurées (sessions, analyses), iOS 17+ |
 | Image format | Base64 vs Multipart | **Multipart** | 30% plus léger, standard HTTP |
 | Streaming | SSE vs WebSocket | **SSE** | Plus simple, unidirectionnel suffit, reconnexion native |
