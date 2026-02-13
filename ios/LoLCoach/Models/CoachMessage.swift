@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 
 enum MessageType: String {
     case system
@@ -7,6 +8,7 @@ enum MessageType: String {
 }
 
 @Observable
+@MainActor
 final class CoachMessage: Identifiable {
     let id: UUID
     let type: MessageType

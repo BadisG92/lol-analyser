@@ -281,6 +281,10 @@ struct CaptureView: View {
         )
 
         isProcessing = false
+
+        // Only navigate if startNewGame did not set an immediate error
+        // (e.g. image compression failure)
+        guard gameViewModel.error == nil else { return }
         navigateToGame = true
     }
 }

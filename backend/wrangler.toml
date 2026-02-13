@@ -11,6 +11,12 @@ ENVIRONMENT = "development"
 [[kv_namespaces]]
 binding = "CACHE"
 id = "placeholder-dev-id"
+# For local dev, wrangler dev uses --local by default and ignores the id.
+# For production deploy, replace "placeholder-dev-id" with a real KV namespace ID
+# created via: wrangler kv namespace create CACHE
+
+# Local development preview namespace (used by wrangler dev --remote)
+# preview_id = "your-preview-namespace-id"
 
 [[r2_buckets]]
 binding = "IMAGES"

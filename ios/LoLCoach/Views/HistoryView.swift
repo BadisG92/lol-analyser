@@ -12,18 +12,18 @@ struct HistoryView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
 
-    @Query(sort: \GameSessionRecord.createdAt, order: .reverse)
-    private var allRecords: [GameSessionRecord]
+    @Query(sort: \GameSession.createdAt, order: .reverse)
+    private var allSessions: [GameSession]
 
     @State private var searchText = ""
 
-    private var filteredRecords: [GameSessionRecord] {
+    private var filteredSessions: [GameSession] {
         if searchText.isEmpty {
-            return allRecords
+            return allSessions
         }
-        return allRecords.filter { record in
-            record.playerChampion.localizedCaseInsensitiveContains(searchText)
-                || record.riotId.localizedCaseInsensitiveContains(searchText)
+        return allSessions.filter { session in
+            session.playerChampion.localizedCaseInsensitiveContains(searchText)
+                || session.riotId.localizedCaseInsensitiveContains(searchText)
         }
     }
 
@@ -32,10 +32,10 @@ struct HistoryView: View {
             Color(hex: 0x0A0E1A)
                 .ignoresSafeArea()
 
-            if allRecords.isEmpty {
+            if allSessions.isEmpty {
                 emptyState
             } else {
-                recordsList
+                sessionsList
             }
         }
         .navigationTitle("Historique")
@@ -45,22 +45,22 @@ struct HistoryView: View {
         .preferredColorScheme(.dark)
     }
 
-    // MARK: - Records List
+    // MARK: - Sessions List
 
-    private var recordsList: some View {
+    private var sessionsList: some View {
         List {
             ForEach(groupedByDate, id: \.key) { group in
                 Section {
-                    ForEach(group.records, id: \.sessionId) { record in
+                    ForEach(group.sessions) { session in
                         NavigationLink {
-                            GameView(record: record, isReview: true)
+                            GameView(session: session, isReview: true)
                         } label: {
-                            HistoryRow(record: record)
+                            HistoryRow(session: session)
                         }
                         .listRowBackground(Color(hex: 0x111827))
                     }
                     .onDelete { offsets in
-                        deleteRecords(in: group.records, at: offsets)
+                        deleteSessions(in: group.sessions, at: offsets)
                     }
                 } header: {
                     Text(group.key)
@@ -97,35 +97,35 @@ struct HistoryView: View {
 
     private struct DateGroup {
         let key: String
-        let records: [GameSessionRecord]
+        let sessions: [GameSession]
     }
 
     private var groupedByDate: [DateGroup] {
         let calendar = Calendar.current
-        let grouped = Dictionary(grouping: filteredRecords) { record -> String in
-            if calendar.isDateInToday(record.createdAt) {
+        let grouped = Dictionary(grouping: filteredSessions) { session -> String in
+            if calendar.isDateInToday(session.createdAt) {
                 return "Aujourd'hui"
-            } else if calendar.isDateInYesterday(record.createdAt) {
+            } else if calendar.isDateInYesterday(session.createdAt) {
                 return "Hier"
             } else {
-                return record.createdAt.formatted(.dateTime.day().month(.wide))
+                return session.createdAt.formatted(.dateTime.day().month(.wide))
             }
         }
 
         return grouped
-            .map { DateGroup(key: $0.key, records: $0.value) }
+            .map { DateGroup(key: $0.key, sessions: $0.value) }
             .sorted { g1, g2 in
-                let d1 = g1.records.first?.createdAt ?? .distantPast
-                let d2 = g2.records.first?.createdAt ?? .distantPast
+                let d1 = g1.sessions.first?.createdAt ?? .distantPast
+                let d2 = g2.sessions.first?.createdAt ?? .distantPast
                 return d1 > d2
             }
     }
 
     // MARK: - Actions
 
-    private func deleteRecords(in records: [GameSessionRecord], at offsets: IndexSet) {
+    private func deleteSessions(in sessions: [GameSession], at offsets: IndexSet) {
         for index in offsets {
-            modelContext.delete(records[index])
+            modelContext.delete(sessions[index])
         }
         try? modelContext.save()
     }
@@ -135,7 +135,7 @@ struct HistoryView: View {
 
 /// A detailed row for the history list, showing champion, role, game stats, and metadata.
 struct HistoryRow: View {
-    let record: GameSessionRecord
+    let session: GameSession
 
     var body: some View {
         HStack(spacing: 14) {
@@ -145,7 +145,7 @@ struct HistoryRow: View {
                     .fill(teamGradient)
                     .frame(width: 50, height: 50)
 
-                Text(String(record.playerChampion.prefix(2)).uppercased())
+                Text(String(session.playerChampion.prefix(2)).uppercased())
                     .font(.system(size: 16, weight: .black, design: .monospaced))
                     .foregroundStyle(.white)
             }
@@ -153,50 +153,66 @@ struct HistoryRow: View {
             // Info
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {
-                    Text(record.playerChampion)
+                    Text(session.playerChampion)
                         .font(.subheadline)
                         .fontWeight(.bold)
                         .foregroundStyle(.white)
 
-                    if let role = Role(rawValue: record.playerRole) {
-                        Text(role.displayName)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color(hex: 0x1E293B))
-                            .clipShape(Capsule())
-                    }
+                    Text(session.playerRole.displayName)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color(hex: 0x1E293B))
+                        .clipShape(Capsule())
                 }
 
                 HStack(spacing: 12) {
-                    if let phase = GamePhase(rawValue: record.gamePhase) {
-                        Text(phase.displayName)
-                            .font(.caption2)
-                            .foregroundStyle(phaseColor)
-                    }
+                    // Game time from latest analysis
+                    if let latest = session.latestAnalysis {
+                        HStack(spacing: 3) {
+                            Image(systemName: "clock")
+                                .font(.caption2)
+                            Text("\(Int(latest.extraction.gameTimeMinutes))min")
+                                .font(.caption)
+                        }
 
-                    if !record.coachingSummary.isEmpty {
-                        Text(record.coachingSummary)
+                        // Score
+                        HStack(spacing: 3) {
+                            Text("\(latest.extraction.blueTeam.kills)")
+                                .foregroundStyle(Color(hex: 0x4A9EEF))
+                            Text("-")
+                            Text("\(latest.extraction.redTeam.kills)")
+                                .foregroundStyle(Color(hex: 0xEF4444))
+                        }
+                        .font(.caption)
+                        .fontWeight(.medium)
+
+                        // Phase
+                        Text(latest.gamePhase.displayName)
+                            .font(.caption2)
+                            .foregroundStyle(phaseColor(for: latest.gamePhase))
+                    } else {
+                        Text("Pas de donnees")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                            .foregroundStyle(.tertiary)
                     }
                 }
+                .foregroundStyle(.secondary)
             }
 
             Spacer()
 
-            // Right info
+            // Right side info
             VStack(alignment: .trailing, spacing: 6) {
-                Text(record.createdAt.formatted(.dateTime.hour().minute()))
+                Text(session.createdAt.formatted(.dateTime.hour().minute()))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
 
                 HStack(spacing: 3) {
                     Image(systemName: "camera.fill")
                         .font(.caption2)
-                    Text("\(record.analysisCount)")
+                    Text("\(session.analyses.count)")
                         .font(.caption)
                         .fontWeight(.medium)
                 }
@@ -207,18 +223,17 @@ struct HistoryRow: View {
     }
 
     private var teamGradient: LinearGradient {
-        let colors: [Color] = record.playerTeam == "blue"
+        let colors: [Color] = session.playerTeam == .blue
             ? [Color(hex: 0x0A5CA8), Color(hex: 0x0D3F73)]
             : [Color(hex: 0x9B2C2C), Color(hex: 0x742020)]
         return LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
     }
 
-    private var phaseColor: Color {
-        switch record.gamePhase {
-        case "early": Color(hex: 0x22C55E)
-        case "mid": Color(hex: 0xF59E0B)
-        case "late": Color(hex: 0xEF4444)
-        default: Color(hex: 0x3B4A6B)
+    private func phaseColor(for phase: GamePhase) -> Color {
+        switch phase {
+        case .early: Color(hex: 0x22C55E)
+        case .mid: Color(hex: 0xF59E0B)
+        case .late: Color(hex: 0xEF4444)
         }
     }
 }

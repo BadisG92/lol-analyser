@@ -3,6 +3,7 @@ import Observation
 import SwiftData
 
 @Observable
+@MainActor
 final class HomeViewModel {
     var recentSessions: [GameSession] = []
 

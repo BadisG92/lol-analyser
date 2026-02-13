@@ -23,7 +23,7 @@ struct ContentView: View {
             if appState.isSetupComplete {
                 HomeView()
             } else {
-                SetupView()
+                SetupView(wrapsInNavigationStack: false)
             }
         }
         .tint(Color(hex: 0xC89B3C))

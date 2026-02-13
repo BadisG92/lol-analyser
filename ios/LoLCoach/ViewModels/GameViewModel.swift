@@ -18,28 +18,46 @@ final class GameViewModel {
 
     private var streamingTask: Task<Void, Never>?
 
+    /// Generation counter to discard events from stale (cancelled) streams.
+    private var streamGeneration: Int = 0
+
+    deinit {
+        streamingTask?.cancel()
+    }
+
     // MARK: - Public API
 
     func startNewGame(image: UIImage, riotId: String, region: Region) {
         resetState()
-
-        guard let imageData = try? ImageProcessor.compressForUpload(image: image) else {
-            error = "Impossible de compresser l'image."
-            return
-        }
-
         isLoading = true
-        statusMessage = "Envoi du screenshot..."
+        statusMessage = "Compression de l'image..."
 
         streamingTask?.cancel()
+        streamGeneration += 1
+        let generation = streamGeneration
         streamingTask = Task {
+            // Perform CPU-intensive image compression off the main actor.
+            let imageData: Data
+            do {
+                imageData = try await Task.detached(priority: .userInitiated) {
+                    try ImageProcessor.compressForUpload(image: image)
+                }.value
+            } catch {
+                self.error = "Impossible de compresser l'image."
+                self.isLoading = false
+                return
+            }
+
+            guard !Task.isCancelled, generation == self.streamGeneration else { return }
+
+            self.statusMessage = "Envoi du screenshot..."
             let stream = APIClient.shared.initGame(
                 image: imageData,
                 riotId: riotId,
                 region: region.rawValue
             )
 
-            await processSSEStream(stream)
+            await self.processSSEStream(stream, generation: generation)
         }
     }
 
@@ -49,40 +67,53 @@ final class GameViewModel {
             return
         }
 
-        guard let imageData = try? ImageProcessor.compressForUpload(image: image) else {
-            error = "Impossible de compresser l'image."
-            return
-        }
-
         isLoading = true
         isStreaming = false
         coachingText = ""
         error = nil
-        statusMessage = "Envoi du screenshot..."
+        statusMessage = "Compression de l'image..."
 
         streamingTask?.cancel()
+        streamGeneration += 1
+        let generation = streamGeneration
         streamingTask = Task {
+            // Perform CPU-intensive image compression off the main actor.
+            let imageData: Data
+            do {
+                imageData = try await Task.detached(priority: .userInitiated) {
+                    try ImageProcessor.compressForUpload(image: image)
+                }.value
+            } catch {
+                self.error = "Impossible de compresser l'image."
+                self.isLoading = false
+                return
+            }
+
+            guard !Task.isCancelled, generation == self.streamGeneration else { return }
+
+            self.statusMessage = "Envoi du screenshot..."
             let stream = APIClient.shared.analyzeScreenshot(
                 gameId: gid,
                 image: imageData
             )
 
-            await processSSEStream(stream)
+            await self.processSSEStream(stream, generation: generation)
         }
     }
 
     func cancel() {
         streamingTask?.cancel()
+        streamingTask = nil
         isLoading = false
         isStreaming = false
     }
 
     // MARK: - SSE Stream Processing
 
-    private func processSSEStream(_ stream: AsyncThrowingStream<SSEEvent, Error>) async {
+    private func processSSEStream(_ stream: AsyncThrowingStream<SSEEvent, Error>, generation: Int) async {
         do {
             for try await event in stream {
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled, generation == streamGeneration else { return }
 
                 switch event {
                 case .status(let status):

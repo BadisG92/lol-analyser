@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { buildCoachingPrompt, buildGameInitPrompt } from "../prompts/coaching";
-import type { GamePhase, TabScreenExtraction, PlayerEnriched } from "../types/game";
+import type { GamePhase, TabScreenExtraction } from "../types/game";
 
 function detectGamePhase(minutes: number): GamePhase {
   if (minutes < 12) return "early";
@@ -175,11 +175,16 @@ async function streamClaudeResponse(
   });
 
   stream.on("text", (text) => callbacks.onText(text));
-  stream.on("end", () => callbacks.onDone());
-  stream.on("error", (error) => callbacks.onError(error as Error));
 
-  // Wait for the stream to complete
-  await stream.finalMessage();
+  // finalMessage() rejects on stream errors, so we wrap it in try/catch.
+  // We do NOT use stream.on("error") because finalMessage() already surfaces
+  // the error — using both would call onError twice or cause unhandled rejections.
+  try {
+    await stream.finalMessage();
+    callbacks.onDone();
+  } catch (error) {
+    callbacks.onError(error instanceof Error ? error : new Error(String(error)));
+  }
 }
 
 export { detectGamePhase, formatExtraction, formatPlayerData, summarizePreviousAnalyses };

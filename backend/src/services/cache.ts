@@ -23,6 +23,16 @@ export async function saveSession(
   });
 }
 
+/**
+ * Add an analysis to an existing session.
+ *
+ * NOTE: This is a get-then-put operation and is NOT atomic.
+ * Cloudflare KV does not support CAS/transactions. If two requests
+ * call addAnalysis concurrently for the same session, one analysis
+ * may be lost (last-write-wins). This is acceptable for this use case
+ * because a single user sends screenshots sequentially from their phone,
+ * but we add a deduplication check as a safety net.
+ */
 export async function addAnalysis(
   kv: KVNamespace,
   sessionId: string,
@@ -30,6 +40,11 @@ export async function addAnalysis(
 ): Promise<GameSession | null> {
   const session = await getSession(kv, sessionId);
   if (!session) return null;
+
+  // Deduplicate: skip if an analysis with the same id already exists
+  if (session.analyses.some((a) => a.id === analysis.id)) {
+    return session;
+  }
 
   session.analyses.push(analysis);
   await saveSession(kv, session);
@@ -52,7 +67,10 @@ export async function addUserSession(
 ): Promise<void> {
   const key = `user_sessions:${riotId}`;
   const ids = (await kv.get<string[]>(key, "json")) ?? [];
-  ids.unshift(sessionId);
+  // Deduplicate: don't add the same session twice
+  if (!ids.includes(sessionId)) {
+    ids.unshift(sessionId);
+  }
   // Keep last 50 sessions
   if (ids.length > 50) ids.length = 50;
   await kv.put(key, JSON.stringify(ids), { expirationTtl: 30 * 86400 });

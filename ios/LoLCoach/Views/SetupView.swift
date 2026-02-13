@@ -10,6 +10,10 @@ struct SetupView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
 
+    /// When `true`, SetupView wraps itself in a NavigationStack (for sheet presentation).
+    /// When `false`, it assumes it is already inside a NavigationStack (e.g. embedded in ContentView).
+    var wrapsInNavigationStack: Bool = true
+
     @State private var riotId: String = ""
     @State private var selectedRegion: Region = .euw1
     @State private var showError = false
@@ -24,53 +28,61 @@ struct SetupView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                LinearGradient(
-                    colors: [Color(hex: 0x0A0E1A), Color(hex: 0x111827)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-
-                ScrollView {
-                    VStack(spacing: 36) {
-                        welcomeSection
-                        formSection
-                        submitButton
-                        infoSection
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 32)
-                    .padding(.bottom, 48)
-                }
+        if wrapsInNavigationStack {
+            NavigationStack {
+                formContent
             }
-            .navigationTitle("Configuration")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
-                if appState.isSetupComplete {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Fermer") {
-                            dismiss()
-                        }
-                        .foregroundStyle(Color(hex: 0xC89B3C))
-                    }
-                }
-            }
-            .onAppear {
-                if appState.isSetupComplete {
-                    riotId = appState.riotId
-                    selectedRegion = appState.region
-                }
-            }
-            .alert("Erreur", isPresented: $showError) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(errorMessage)
-            }
-            .preferredColorScheme(.dark)
+        } else {
+            formContent
         }
+    }
+
+    private var formContent: some View {
+        ZStack {
+            LinearGradient(
+                colors: [Color(hex: 0x0A0E1A), Color(hex: 0x111827)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 36) {
+                    welcomeSection
+                    formSection
+                    submitButton
+                    infoSection
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 32)
+                .padding(.bottom, 48)
+            }
+        }
+        .navigationTitle("Configuration")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            if appState.isSetupComplete {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Fermer") {
+                        dismiss()
+                    }
+                    .foregroundStyle(Color(hex: 0xC89B3C))
+                }
+            }
+        }
+        .onAppear {
+            if appState.isSetupComplete {
+                riotId = appState.riotId
+                selectedRegion = appState.region
+            }
+        }
+        .alert("Erreur", isPresented: $showError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(errorMessage)
+        }
+        .preferredColorScheme(.dark)
     }
 
     // MARK: - Welcome

@@ -22,14 +22,18 @@ struct SSECoachingChunk: Codable {
 }
 
 struct SSEDone: Codable {
-    let gameId: String
+    let gameId: String?
+    let analysisId: String?
     let phase: GamePhase
     let gameTime: Double
+    let totalAnalyses: Int?
 
     enum CodingKeys: String, CodingKey {
         case gameId = "game_id"
+        case analysisId = "analysis_id"
         case phase
         case gameTime = "game_time"
+        case totalAnalyses = "total_analyses"
     }
 }
 

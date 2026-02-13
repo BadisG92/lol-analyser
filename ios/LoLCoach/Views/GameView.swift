@@ -57,9 +57,9 @@ struct GameView: View {
                         .padding(.vertical, 16)
                     }
                     .onChange(of: gameViewModel.coachingText) { _, _ in
-                        withAnimation(.easeOut(duration: 0.15)) {
-                            proxy.scrollTo("live-card", anchor: .bottom)
-                        }
+                        // Scroll without animation during streaming to avoid
+                        // spamming dozens of animation transactions per second.
+                        proxy.scrollTo("live-card", anchor: .bottom)
                     }
                     .onChange(of: gameViewModel.analyses.count) { _, _ in
                         if let lastId = gameViewModel.analyses.last?.id {
@@ -89,6 +89,11 @@ struct GameView: View {
         .onChange(of: selectedItem) { _, newValue in
             Task {
                 await handleNewScreenshot(item: newValue)
+            }
+        }
+        .onDisappear {
+            if !isReview {
+                gameViewModel.cancel()
             }
         }
         .preferredColorScheme(.dark)
@@ -365,9 +370,15 @@ struct GameView: View {
     private func handleNewScreenshot(item: PhotosPickerItem?) async {
         guard let item else { return }
         guard let data = try? await item.loadTransferable(type: Data.self),
-              let image = UIImage(data: data) else { return }
+              let image = UIImage(data: data) else {
+            // Reset so the user can retry the same image
+            selectedItem = nil
+            return
+        }
 
         gameViewModel.analyzeScreenshot(image: image)
+        // Reset so the user can re-select the same image later
+        selectedItem = nil
     }
 }
 

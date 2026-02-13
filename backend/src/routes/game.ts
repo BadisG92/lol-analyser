@@ -30,11 +30,9 @@ game.post("/init", async (c) => {
     return c.json({ error: "Missing image, riot_id, or region" }, 400);
   }
 
-  // Read image as base64
+  // Read image as base64 (chunk-safe for large images on Workers)
   const imageBuffer = await imageFile.arrayBuffer();
-  const imageBase64 = btoa(
-    String.fromCharCode(...new Uint8Array(imageBuffer))
-  );
+  const imageBase64 = arrayBufferToBase64(imageBuffer);
   const mediaType = imageFile.type as "image/jpeg" | "image/png" | "image/webp";
 
   const anthropic = new Anthropic({ apiKey: c.env.ANTHROPIC_API_KEY });
@@ -181,9 +179,7 @@ game.post("/:id/analyze", async (c) => {
   }
 
   const imageBuffer = await imageFile.arrayBuffer();
-  const imageBase64 = btoa(
-    String.fromCharCode(...new Uint8Array(imageBuffer))
-  );
+  const imageBase64 = arrayBufferToBase64(imageBuffer);
   const mediaType = imageFile.type as "image/jpeg" | "image/png" | "image/webp";
 
   const anthropic = new Anthropic({ apiKey: c.env.ANTHROPIC_API_KEY });
@@ -319,30 +315,58 @@ function findPlayer(
   extraction: TabScreenExtraction,
   riotId: string
 ): { name: string; champion: string; role: Role; team: "blue" | "red" } {
-  const riotIdLower = riotId.toLowerCase().replace("#", "");
+  // Normalize: remove "#" and taglines for matching.
+  // Riot ID format: "Name#TAG". OCR may drop the tag or mangle it.
+  const normalize = (s: string) => s.toLowerCase().replace(/#/g, " ").trim();
+  const riotNorm = normalize(riotId);
 
-  // Try to find exact or partial match in both teams
-  for (const player of extraction.blue_team.players) {
-    const nameLower = player.name.toLowerCase().replace("#", "");
-    if (nameLower.includes(riotIdLower) || riotIdLower.includes(nameLower)) {
+  const allPlayers = [
+    ...extraction.blue_team.players.map((p) => ({ ...p, team: "blue" as const })),
+    ...extraction.red_team.players.map((p) => ({ ...p, team: "red" as const })),
+  ];
+
+  // Pass 1: Exact match (after normalization)
+  for (const player of allPlayers) {
+    if (normalize(player.name) === riotNorm) {
       return {
         name: player.name,
         champion: player.champion,
         role: player.estimated_role,
-        team: "blue",
+        team: player.team,
       };
     }
   }
-  for (const player of extraction.red_team.players) {
-    const nameLower = player.name.toLowerCase().replace("#", "");
-    if (nameLower.includes(riotIdLower) || riotIdLower.includes(nameLower)) {
-      return {
-        name: player.name,
-        champion: player.champion,
-        role: player.estimated_role,
-        team: "red",
-      };
+
+  // Pass 2: One contains the other, but prefer the BEST match (longest overlap).
+  // Score by how much of the riotId the name covers + vice versa.
+  // Only match if at least 3 characters overlap to avoid matching "A" in "Azir Player".
+  type ScoredMatch = { player: (typeof allPlayers)[number]; score: number };
+  const MIN_MATCH_LEN = 3;
+  const candidates: ScoredMatch[] = [];
+
+  for (const player of allPlayers) {
+    const nameNorm = normalize(player.name);
+    if (nameNorm.length < MIN_MATCH_LEN && riotNorm.length < MIN_MATCH_LEN) continue;
+
+    if (nameNorm.includes(riotNorm) && riotNorm.length >= MIN_MATCH_LEN) {
+      // riotId is fully contained in the player name
+      candidates.push({ player, score: riotNorm.length / nameNorm.length });
+    } else if (riotNorm.includes(nameNorm) && nameNorm.length >= MIN_MATCH_LEN) {
+      // player name is fully contained in the riotId
+      candidates.push({ player, score: nameNorm.length / riotNorm.length });
     }
+  }
+
+  if (candidates.length > 0) {
+    // Pick the best scoring match (closest to 1.0 = most overlap)
+    candidates.sort((a, b) => b.score - a.score);
+    const best = candidates[0].player;
+    return {
+      name: best.name,
+      champion: best.champion,
+      role: best.estimated_role,
+      team: best.team,
+    };
   }
 
   // Fallback: return first player of blue team
@@ -353,6 +377,21 @@ function findPlayer(
     role: fallback?.estimated_role ?? "mid",
     team: "blue",
   };
+}
+
+// ── Helper: ArrayBuffer to base64 without stack overflow ──
+// String.fromCharCode(...uint8Array) blows the call stack for images >64KB.
+// Process in 8KB chunks to stay safe on Cloudflare Workers.
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  const CHUNK = 8192;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    const slice = bytes.subarray(i, Math.min(i + CHUNK, bytes.length));
+    binary += String.fromCharCode(...slice);
+  }
+  return btoa(binary);
 }
 
 export default game;
