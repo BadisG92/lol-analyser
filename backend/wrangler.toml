@@ -1,0 +1,17 @@
+name = "lol-coach-api"
+main = "src/index.ts"
+compatibility_date = "2025-02-01"
+
+[vars]
+ENVIRONMENT = "development"
+
+# Secrets (set via `wrangler secret put`):
+# ANTHROPIC_API_KEY
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "placeholder-dev-id"
+
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "lol-coach-images"
