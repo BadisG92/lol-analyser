@@ -132,8 +132,8 @@ export async function fetchSummonerData(
 
     // Parse rank/winrate from the raw text response
     const rank = extractField(raw, "rank", "tier") ?? "Unranked";
-    const winRate = parseFloat(extractField(raw, "win_rate", "winRate") ?? "50");
-    const gamesPlayed = parseInt(extractField(raw, "games", "total_games") ?? "0", 10);
+    const winRate = parseFloat(extractField(raw, "win_rate", "winRate") ?? "50") || 50;
+    const gamesPlayed = parseInt(extractField(raw, "games", "total_games") ?? "0", 10) || 0;
 
     return { raw, rank, winRate, gamesPlayed };
   } catch (e) {

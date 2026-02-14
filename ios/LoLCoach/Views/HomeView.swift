@@ -317,7 +317,7 @@ struct HomeHistoryItem: View {
 
     private var championIcon: some View {
         DDragonImage(
-            url: URL(string: "https://ddragon.leagueoflegends.com/cdn/15.3.1/img/champion/\(session.playerChampion).png"),
+            url: DesignTokens.championIconURL(session.playerChampion),
             size: 44
         )
         .overlay {

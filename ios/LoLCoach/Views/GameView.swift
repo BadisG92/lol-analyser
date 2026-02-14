@@ -175,7 +175,7 @@ struct GameView: View {
             // Champion icon via DDragonImage
             if let championName, !championName.isEmpty {
                 DDragonImage(
-                    url: URL(string: "https://ddragon.leagueoflegends.com/cdn/15.3.1/img/champion/\(championName).png"),
+                    url: DesignTokens.championIconURL(championName),
                     size: 44
                 )
                 .overlay {

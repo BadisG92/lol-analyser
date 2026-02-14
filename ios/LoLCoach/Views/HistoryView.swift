@@ -265,7 +265,7 @@ struct HistoryRow: View {
 
     private var championPortrait: some View {
         DDragonImage(
-            url: URL(string: "https://ddragon.leagueoflegends.com/cdn/15.3.1/img/champion/\(session.playerChampion).png"),
+            url: DesignTokens.championIconURL(session.playerChampion),
             size: 50
         )
         .overlay {

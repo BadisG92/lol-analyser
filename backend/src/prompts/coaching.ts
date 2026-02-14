@@ -3,7 +3,7 @@ import { findChampion } from "../data/champions";
 
 function getChampionContext(championName: string): string {
   const champ = findChampion(championName);
-  if (!champ) return "";
+  if (!champ || !champ.tags || champ.tags.length === 0) return "";
   return ` (${champ.tags.join("/")})`;
 }
 

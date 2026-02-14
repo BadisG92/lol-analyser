@@ -299,4 +299,15 @@ enum DesignTokens {
     static func teamColor(for team: Team) -> Color {
         team == .blue ? teamBlue : teamRed
     }
+
+    // MARK: - DDragon
+
+    /// Current patch — update when Riot releases a new patch.
+    static let currentPatch = "15.3.1"
+    private static let ddragonCDN = "https://ddragon.leagueoflegends.com/cdn"
+
+    /// Build a DDragon champion icon URL.
+    static func championIconURL(_ championName: String) -> URL? {
+        URL(string: "\(ddragonCDN)/\(currentPatch)/img/champion/\(championName).png")
+    }
 }

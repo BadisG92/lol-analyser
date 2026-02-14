@@ -255,7 +255,11 @@ export function buildItemReferenceForExtraction(): string {
  */
 export function buildItemListForCoaching(): string {
   const completed = ITEMS.filter(
-    (i) => i.category !== "component" && i.category !== "starter" && i.gold >= 1000
+    (i) =>
+      i.category !== "component" &&
+      i.category !== "starter" &&
+      i.category !== "jungle" &&
+      (i.gold >= 1000 || i.category === "boots")
   );
   return completed.map((i) => i.name).join(", ");
 }
