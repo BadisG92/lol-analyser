@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { EXTRACTION_PROMPT } from "../prompts/extraction";
+import { buildExtractionPrompt } from "../prompts/extraction";
 import type { TabScreenExtraction } from "../types/game";
 
 export async function extractTabScreen(
@@ -18,7 +18,7 @@ export async function extractTabScreen(
             type: "image",
             source: { type: "base64", media_type: mediaType, data: imageBase64 },
           },
-          { type: "text", text: EXTRACTION_PROMPT },
+          { type: "text", text: buildExtractionPrompt() },
         ],
       },
     ],

@@ -1,17 +1,32 @@
-export const EXTRACTION_PROMPT = `Analyse ce screenshot du scoreboard TAB de League of Legends.
+import { buildItemReferenceForExtraction } from "../data/items";
+import { CHAMPION_NAMES } from "../data/champions";
+
+/**
+ * Build the full extraction prompt with current patch item/champion references.
+ *
+ * The item visual descriptions help Haiku identify icons on the TAB screen.
+ * The champion list ensures correct spelling of champion names.
+ */
+export function buildExtractionPrompt(): string {
+  const itemRef = buildItemReferenceForExtraction();
+  const championList = CHAMPION_NAMES.join(", ");
+
+  return `Analyse ce screenshot du scoreboard TAB de League of Legends.
 
 INSTRUCTIONS :
 - Extrais TOUTES les informations visibles en JSON strict
 - Les équipes sont Blue (gauche) et Red (droite)
 - Le temps de jeu est en haut au centre
 - Les objectifs (drakes, grubs, tours) sont visibles via des icônes
-- Pour les items, identifie-les par leur icône. Les items courants :
-  * Épées/lames = items AD (Infinity Edge, Bloodthirster, etc.)
-  * Baguettes/orbes = items AP (Rabadon, Zhonya, etc.)
-  * Boucliers/armures = items tank (Sunfire, Thornmail, etc.)
-  * Bottes = boots (Berserker, Sorcerer, etc.)
+- Pour les items, identifie-les par leur icône EN UTILISANT la référence ci-dessous
 - Si un élément n'est pas lisible avec certitude, utilise null (PAS de guess)
 - Pour les champions, base-toi sur le portrait ET la position dans la liste
+- Utilise les noms EXACTS de la liste de champions ci-dessous
+
+CHAMPIONS (noms exacts à utiliser) :
+${championList}
+
+${itemRef}
 
 RÈGLES DE VALIDATION :
 - CS : entre 0 et 600 (>12 CS/min = suspect)
@@ -73,3 +88,10 @@ ORDRE D'EXTRACTION (priorité) :
 6. Minimap (best effort)
 
 Réponds UNIQUEMENT avec le JSON valide, aucun texte autour.`;
+}
+
+/**
+ * Legacy static prompt (kept for backwards compatibility in tests).
+ * Use buildExtractionPrompt() instead.
+ */
+export const EXTRACTION_PROMPT = buildExtractionPrompt();

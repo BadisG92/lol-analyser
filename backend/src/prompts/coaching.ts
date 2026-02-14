@@ -1,3 +1,12 @@
+import { buildItemListForCoaching } from "../data/items";
+import { findChampion } from "../data/champions";
+
+function getChampionContext(championName: string): string {
+  const champ = findChampion(championName);
+  if (!champ) return "";
+  return ` (${champ.tags.join("/")})`;
+}
+
 export function buildCoachingPrompt(params: {
   riotId: string;
   playerChampion: string;
@@ -10,6 +19,8 @@ export function buildCoachingPrompt(params: {
   buildRecommendation: string;
 }): string {
   const p = params;
+  const champCtx = getChampionContext(p.playerChampion);
+  const itemList = buildItemListForCoaching();
 
   return `Tu es un coach League of Legends de niveau professionnel (LEC/LCK).
 Tu coaches ${p.riotId} EN TEMPS RÉEL pendant sa game ranked.
@@ -21,7 +32,7 @@ Sois BREF, DIRECT, ACTIONNABLE. Pas de blabla.
 JOUEUR COACHÉ
 ═══════════════════════════════════════════
 Riot ID : ${p.riotId}
-Champion : ${p.playerChampion}
+Champion : ${p.playerChampion}${champCtx}
 Rôle : ${p.playerRole}
 Rank : ${p.playerRank}
 Équipe : ${p.playerTeam === "blue" ? "Blue (gauche)" : "Red (droite)"}
@@ -35,6 +46,11 @@ ${p.playerData}
 BUILD RECOMMANDÉ (OP.GG meta)
 ═══════════════════════════════════════════
 ${p.buildRecommendation}
+
+═══════════════════════════════════════════
+ITEMS DISPONIBLES (patch actuel)
+═══════════════════════════════════════════
+${itemList}
 
 ═══════════════════════════════════════════
 ÉTAT ACTUEL DE LA GAME (extrait du TAB screen)
@@ -128,6 +144,8 @@ export function buildGameInitPrompt(params: {
   buildRecommendation: string;
 }): string {
   const p = params;
+  const champCtx = getChampionContext(p.playerChampion);
+  const itemList = buildItemListForCoaching();
 
   return `Tu es un coach League of Legends de niveau professionnel (LEC/LCK).
 Tu prépares un PLAN DE JEU pour ${p.riotId} AVANT/AU DÉBUT de sa game ranked.
@@ -136,7 +154,7 @@ Tu prépares un PLAN DE JEU pour ${p.riotId} AVANT/AU DÉBUT de sa game ranked.
 JOUEUR COACHÉ
 ═══════════════════════════════════════════
 Riot ID : ${p.riotId}
-Champion : ${p.playerChampion}
+Champion : ${p.playerChampion}${champCtx}
 Rôle : ${p.playerRole}
 Rank : ${p.playerRank}
 Équipe : ${p.playerTeam === "blue" ? "Blue" : "Red"}
@@ -150,6 +168,11 @@ ${p.playerData}
 BUILD RECOMMANDÉ (OP.GG meta pour ce matchup)
 ═══════════════════════════════════════════
 ${p.buildRecommendation}
+
+═══════════════════════════════════════════
+ITEMS DISPONIBLES (patch actuel)
+═══════════════════════════════════════════
+${itemList}
 
 ═══════════════════════════════════════════
 LOADING SCREEN / CHAMP SELECT (extrait du screenshot)
