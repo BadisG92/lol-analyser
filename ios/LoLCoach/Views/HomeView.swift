@@ -5,29 +5,26 @@ import SwiftData
 
 /// Main landing screen after setup.
 ///
-/// Shows the player's Riot ID, a prominent "Nouvelle Analyse" button,
-/// and a list of recent game sessions loaded from SwiftData via AppState.
+/// Shows the player's Riot ID with a rank/region badge, a prominent
+/// "Nouvelle Analyse" GlowButton, and a list of recent game sessions
+/// with DDragon champion icons, role badges, and team-colored stats.
 struct HomeView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
 
     @State private var showSetup = false
     @State private var navigateToCapture = false
+    @State private var gradientPhase: CGFloat = 0
 
     var body: some View {
         ZStack {
-            // Background gradient
-            LinearGradient(
-                colors: [Color(hex: 0x0A0E1A), Color(hex: 0x111827)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            DesignTokens.bgGradient
+                .ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: 24) {
                     headerSection
-                    newAnalysisButton
+                    ctaButton
 
                     if appState.recentSessions.isEmpty {
                         emptyStateView
@@ -49,7 +46,7 @@ struct HomeView: View {
                     showSetup = true
                 } label: {
                     Image(systemName: "gearshape.fill")
-                        .foregroundStyle(Color(hex: 0xC89B3C))
+                        .foregroundStyle(DesignTokens.gold)
                 }
             }
         }
@@ -61,71 +58,112 @@ struct HomeView: View {
         }
         .onAppear {
             appState.loadRecentSessions(context: modelContext)
+            withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) {
+                gradientPhase = 1
+            }
         }
     }
 
     // MARK: - Header
 
     private var headerSection: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Invocateur")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(appState.riotId)
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color(hex: 0xC89B3C))
+        VStack(spacing: 12) {
+            // Riot ID prominent display
+            HStack(alignment: .center, spacing: 12) {
+                // Summoner icon placeholder
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [DesignTokens.gold.opacity(0.3), DesignTokens.gold.opacity(0.1)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 52, height: 52)
+
+                    Image(systemName: "person.crop.circle.fill")
+                        .font(.system(size: 28))
+                        .foregroundStyle(DesignTokens.gold)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Invocateur")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                        .tracking(0.8)
+
+                    Text(appState.riotId)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [DesignTokens.gold, DesignTokens.goldLight],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                }
+
+                Spacer()
+
+                // Region badge
+                regionBadge
             }
-
-            Spacer()
-
-            Text(appState.region.displayName)
-                .font(.caption)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Color(hex: 0x1E293B))
-                .clipShape(Capsule())
-                .foregroundStyle(.secondary)
         }
-        .padding(16)
-        .background(Color(hex: 0x1A1F2E).opacity(0.8))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(18)
+        .background(DesignTokens.bgCard.opacity(0.9))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(
+                    AngularGradient(
+                        gradient: Gradient(colors: [
+                            DesignTokens.gold.opacity(0.6),
+                            DesignTokens.blue.opacity(0.3),
+                            DesignTokens.gold.opacity(0.1),
+                            DesignTokens.blue.opacity(0.4),
+                            DesignTokens.gold.opacity(0.6)
+                        ]),
+                        center: .center,
+                        angle: .degrees(gradientPhase * 360)
+                    ),
+                    lineWidth: 1.5
+                )
+        }
     }
 
-    // MARK: - New Analysis Button
+    private var regionBadge: some View {
+        VStack(spacing: 2) {
+            Image(systemName: "globe")
+                .font(.caption2)
+                .foregroundStyle(DesignTokens.blue)
 
-    private var newAnalysisButton: some View {
-        Button {
-            navigateToCapture = true
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "camera.viewfinder")
-                    .font(.title2)
-                Text("Nouvelle Analyse")
-                    .font(.title3)
-                    .fontWeight(.semibold)
-            }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 18)
-            .background(
-                LinearGradient(
-                    colors: [Color(hex: 0x0A5CA8), Color(hex: 0x0D7FD9)],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .shadow(color: Color(hex: 0x0D7FD9).opacity(0.4), radius: 12, y: 4)
+            Text(regionShortName(appState.region))
+                .font(.caption2)
+                .fontWeight(.bold)
+                .foregroundStyle(.white)
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(DesignTokens.bgCardHover)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    // MARK: - CTA Button
+
+    private var ctaButton: some View {
+        GlowButton(title: "Nouvelle Analyse", icon: "camera.viewfinder") {
+            navigateToCapture = true
+        }
     }
 
     // MARK: - Recent Games
 
     private var recentGamesSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text("Games Recentes")
                     .font(.headline)
@@ -134,9 +172,13 @@ struct HomeView: View {
                 NavigationLink {
                     HistoryView()
                 } label: {
-                    Text("Tout voir")
-                        .font(.subheadline)
-                        .foregroundStyle(Color(hex: 0xC89B3C))
+                    HStack(spacing: 4) {
+                        Text("Tout voir")
+                            .font(.subheadline)
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                    }
+                    .foregroundStyle(DesignTokens.gold)
                 }
             }
 
@@ -144,7 +186,7 @@ struct HomeView: View {
                 NavigationLink {
                     GameView(session: session, isReview: true)
                 } label: {
-                    HistoryListItem(session: session)
+                    HomeHistoryItem(session: session)
                 }
                 .buttonStyle(.plain)
             }
@@ -154,97 +196,183 @@ struct HomeView: View {
     // MARK: - Empty State
 
     private var emptyStateView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "sword.circle")
-                .font(.system(size: 48))
-                .foregroundStyle(Color(hex: 0x3B4A6B))
+        VStack(spacing: 20) {
+            ZStack {
+                Circle()
+                    .fill(DesignTokens.muted.opacity(0.1))
+                    .frame(width: 100, height: 100)
 
-            Text("Aucune game analysee")
-                .font(.headline)
-                .foregroundStyle(.secondary)
+                Circle()
+                    .fill(DesignTokens.muted.opacity(0.05))
+                    .frame(width: 130, height: 130)
 
-            Text("Prenez un screenshot TAB pendant votre game et laissez le coach vous guider.")
-                .font(.subheadline)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
+                Image(systemName: "sword.circle")
+                    .font(.system(size: 48))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [DesignTokens.muted, DesignTokens.muted.opacity(0.5)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+            }
+
+            VStack(spacing: 8) {
+                Text("Aucune game analysee")
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+
+                Text("Prenez un screenshot TAB pendant votre game et laissez le coach vous guider.")
+                    .font(.subheadline)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            }
         }
         .padding(.vertical, 48)
     }
+
+    // MARK: - Helpers
+
+    private func regionShortName(_ region: Region) -> String {
+        switch region {
+        case .euw1: "EUW"
+        case .na1: "NA"
+        case .kr: "KR"
+        case .eun1: "EUNE"
+        case .br1: "BR"
+        case .jp1: "JP"
+        case .la1: "LAN"
+        case .la2: "LAS"
+        case .oc1: "OCE"
+        case .tr1: "TR"
+        case .ru: "RU"
+        case .ph2: "PH"
+        case .sg2: "SG"
+        case .th2: "TH"
+        case .tw2: "TW"
+        case .vn2: "VN"
+        }
+    }
 }
 
-// MARK: - HistoryListItem
+// MARK: - HomeHistoryItem
 
-/// Compact row showing a past game session.
-struct HistoryListItem: View {
+/// Compact row for recent games on the home screen.
+/// Displays DDragon champion icon, role badge, game stats with team colors,
+/// relative date, and analysis count.
+struct HomeHistoryItem: View {
     let session: GameSession
 
     var body: some View {
         HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(Color(hex: 0x1E293B))
-                    .frame(width: 48, height: 48)
-                Text(String(session.playerChampion.prefix(2)).uppercased())
-                    .font(.system(size: 14, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color(hex: 0xC89B3C))
-            }
+            // Champion icon from DDragon
+            championIcon
 
-            VStack(alignment: .leading, spacing: 4) {
+            // Champion name + role + stats
+            VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 6) {
                     Text(session.playerChampion)
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundStyle(.white)
 
-                    Text(session.playerRole.displayName)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color(hex: 0x1E293B))
-                        .clipShape(Capsule())
+                    RoleBadge(role: session.playerRole, compact: true)
                 }
 
-                Text(session.summary)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                gameSummaryLine
             }
 
             Spacer()
 
-            VStack(alignment: .trailing, spacing: 4) {
+            // Right side: date + analysis count
+            VStack(alignment: .trailing, spacing: 6) {
                 Text(session.createdAt.formatted(.relative(presentation: .named)))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
 
-                HStack(spacing: 4) {
+                HStack(spacing: 3) {
                     Image(systemName: "camera.fill")
                         .font(.caption2)
                     Text("\(session.analyses.count)")
                         .font(.caption2)
+                        .fontWeight(.medium)
                 }
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DesignTokens.gold.opacity(0.8))
             }
         }
         .padding(14)
-        .background(Color(hex: 0x1A1F2E))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .background(DesignTokens.bgCard)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(
+                    DesignTokens.teamColor(for: session.playerTeam).opacity(0.15),
+                    lineWidth: 1
+                )
+        }
     }
-}
 
-// MARK: - Color Extension
+    // MARK: - Champion Icon
 
-extension Color {
-    init(hex: UInt, opacity: Double = 1.0) {
-        self.init(
-            .sRGB,
-            red: Double((hex >> 16) & 0xFF) / 255.0,
-            green: Double((hex >> 8) & 0xFF) / 255.0,
-            blue: Double(hex & 0xFF) / 255.0,
-            opacity: opacity
+    private var championIcon: some View {
+        DDragonImage(
+            url: URL(string: "https://ddragon.leagueoflegends.com/cdn/15.3.1/img/champion/\(session.playerChampion).png"),
+            size: 44
         )
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(
+                    DesignTokens.teamColor(for: session.playerTeam).opacity(0.6),
+                    lineWidth: 2
+                )
+        }
+    }
+
+    // MARK: - Game Summary Line
+
+    @ViewBuilder
+    private var gameSummaryLine: some View {
+        if let latest = session.latestAnalysis {
+            HStack(spacing: 10) {
+                // Time
+                HStack(spacing: 3) {
+                    Image(systemName: "clock")
+                        .font(.caption2)
+                    Text("\(Int(latest.extraction.gameTimeMinutes))min")
+                        .font(.caption)
+                }
+                .foregroundStyle(.secondary)
+
+                // Team score with colors
+                HStack(spacing: 2) {
+                    Text("\(latest.extraction.blueTeam.kills)")
+                        .foregroundStyle(DesignTokens.teamBlue)
+                    Text("-")
+                        .foregroundStyle(DesignTokens.muted)
+                    Text("\(latest.extraction.redTeam.kills)")
+                        .foregroundStyle(DesignTokens.teamRed)
+                }
+                .font(.caption)
+                .fontWeight(.semibold)
+                .monospacedDigit()
+
+                // Player KDA if available
+                if let player = session.playerData {
+                    KDAText(
+                        kills: player.kills,
+                        deaths: player.deaths,
+                        assists: player.assists,
+                        font: .caption
+                    )
+                }
+            }
+        } else {
+            Text(session.summary)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
     }
 }
 

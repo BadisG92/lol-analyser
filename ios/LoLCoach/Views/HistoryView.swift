@@ -5,8 +5,9 @@ import SwiftData
 
 /// Lists all past game sessions stored in SwiftData.
 ///
-/// Sessions are grouped by date and displayed with champion, role, phase,
-/// and analysis count. Tapping a row navigates to `GameView` in review mode.
+/// Sessions are grouped by date and displayed with DDragon champion icons,
+/// role badges, team-colored borders, game stats, and analysis counts.
+/// Tapping a row navigates to `GameView` in review mode.
 /// Supports swipe-to-delete and a search bar to filter by champion name.
 struct HistoryView: View {
     @Environment(AppState.self) private var appState
@@ -29,7 +30,7 @@ struct HistoryView: View {
 
     var body: some View {
         ZStack {
-            Color(hex: 0x0A0E1A)
+            DesignTokens.bgPrimary
                 .ignoresSafeArea()
 
             if allSessions.isEmpty {
@@ -49,6 +50,13 @@ struct HistoryView: View {
 
     private var sessionsList: some View {
         List {
+            // Stats banner
+            Section {
+                statsHeader
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 8, trailing: 0))
+            }
+
             ForEach(groupedByDate, id: \.key) { group in
                 Section {
                     ForEach(group.sessions) { session in
@@ -57,7 +65,7 @@ struct HistoryView: View {
                         } label: {
                             HistoryRow(session: session)
                         }
-                        .listRowBackground(Color(hex: 0x111827))
+                        .listRowBackground(DesignTokens.bgSecondary)
                     }
                     .onDelete { offsets in
                         deleteSessions(in: group.sessions, at: offsets)
@@ -66,7 +74,7 @@ struct HistoryView: View {
                     Text(group.key)
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .foregroundStyle(Color(hex: 0xC89B3C))
+                        .foregroundStyle(DesignTokens.gold)
                 }
             }
         }
@@ -74,22 +82,95 @@ struct HistoryView: View {
         .scrollContentBackground(.hidden)
     }
 
+    // MARK: - Stats Header
+
+    private var statsHeader: some View {
+        HStack(spacing: 16) {
+            statPill(
+                value: "\(allSessions.count)",
+                label: "Games",
+                icon: "gamecontroller.fill",
+                color: DesignTokens.blue
+            )
+
+            statPill(
+                value: "\(totalAnalyses)",
+                label: "Analyses",
+                icon: "camera.fill",
+                color: DesignTokens.gold
+            )
+
+            statPill(
+                value: uniqueChampionCount,
+                label: "Champions",
+                icon: "person.2.fill",
+                color: DesignTokens.phaseEarly
+            )
+        }
+        .padding(.horizontal, 4)
+    }
+
+    private func statPill(value: String, label: String, icon: String, color: Color) -> some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.caption2)
+                    .foregroundStyle(color)
+                Text(value)
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.white)
+                    .monospacedDigit()
+            }
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .background(DesignTokens.bgCard)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private var totalAnalyses: Int {
+        allSessions.reduce(0) { $0 + $1.analyses.count }
+    }
+
+    private var uniqueChampionCount: String {
+        let champions = Set(allSessions.map(\.playerChampion))
+        return "\(champions.count)"
+    }
+
     // MARK: - Empty State
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "clock.arrow.circlepath")
-                .font(.system(size: 48))
-                .foregroundStyle(Color(hex: 0x3B4A6B))
+        VStack(spacing: 20) {
+            ZStack {
+                Circle()
+                    .fill(DesignTokens.muted.opacity(0.08))
+                    .frame(width: 120, height: 120)
 
-            Text("Aucun historique")
-                .font(.headline)
-                .foregroundStyle(.secondary)
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 48))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [DesignTokens.muted, DesignTokens.muted.opacity(0.5)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+            }
 
-            Text("Vos analyses de games apparaitront ici.")
-                .font(.subheadline)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
+            VStack(spacing: 8) {
+                Text("Aucun historique")
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+
+                Text("Vos analyses de games apparaitront ici.")
+                    .font(.subheadline)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+            }
         }
     }
 
@@ -133,77 +214,35 @@ struct HistoryView: View {
 
 // MARK: - HistoryRow
 
-/// A detailed row for the history list, showing champion, role, game stats, and metadata.
+/// A detailed row for the history list, showing DDragon champion icon with
+/// team-colored border, role badge, game stats (score, time, phase), and metadata.
 struct HistoryRow: View {
     let session: GameSession
 
     var body: some View {
         HStack(spacing: 14) {
-            // Champion avatar
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(teamGradient)
-                    .frame(width: 50, height: 50)
+            // Champion portrait from DDragon with team border
+            championPortrait
 
-                Text(String(session.playerChampion.prefix(2)).uppercased())
-                    .font(.system(size: 16, weight: .black, design: .monospaced))
-                    .foregroundStyle(.white)
-            }
-
-            // Info
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
+            // Info column
+            VStack(alignment: .leading, spacing: 5) {
+                // Champion name + role badge
+                HStack(spacing: 6) {
                     Text(session.playerChampion)
                         .font(.subheadline)
                         .fontWeight(.bold)
                         .foregroundStyle(.white)
 
-                    Text(session.playerRole.displayName)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color(hex: 0x1E293B))
-                        .clipShape(Capsule())
+                    RoleBadge(role: session.playerRole, compact: true)
                 }
 
-                HStack(spacing: 12) {
-                    // Game time from latest analysis
-                    if let latest = session.latestAnalysis {
-                        HStack(spacing: 3) {
-                            Image(systemName: "clock")
-                                .font(.caption2)
-                            Text("\(Int(latest.extraction.gameTimeMinutes))min")
-                                .font(.caption)
-                        }
-
-                        // Score
-                        HStack(spacing: 3) {
-                            Text("\(latest.extraction.blueTeam.kills)")
-                                .foregroundStyle(Color(hex: 0x4A9EEF))
-                            Text("-")
-                            Text("\(latest.extraction.redTeam.kills)")
-                                .foregroundStyle(Color(hex: 0xEF4444))
-                        }
-                        .font(.caption)
-                        .fontWeight(.medium)
-
-                        // Phase
-                        Text(latest.gamePhase.displayName)
-                            .font(.caption2)
-                            .foregroundStyle(phaseColor(for: latest.gamePhase))
-                    } else {
-                        Text("Pas de donnees")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                .foregroundStyle(.secondary)
+                // Game stats row
+                gameStatsRow
             }
 
             Spacer()
 
-            // Right side info
+            // Right side: time + analysis count
             VStack(alignment: .trailing, spacing: 6) {
                 Text(session.createdAt.formatted(.dateTime.hour().minute()))
                     .font(.caption2)
@@ -216,24 +255,79 @@ struct HistoryRow: View {
                         .font(.caption)
                         .fontWeight(.medium)
                 }
-                .foregroundStyle(Color(hex: 0xC89B3C))
+                .foregroundStyle(DesignTokens.gold)
             }
         }
         .padding(.vertical, 4)
     }
 
-    private var teamGradient: LinearGradient {
-        let colors: [Color] = session.playerTeam == .blue
-            ? [Color(hex: 0x0A5CA8), Color(hex: 0x0D3F73)]
-            : [Color(hex: 0x9B2C2C), Color(hex: 0x742020)]
-        return LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
+    // MARK: - Champion Portrait
+
+    private var championPortrait: some View {
+        DDragonImage(
+            url: URL(string: "https://ddragon.leagueoflegends.com/cdn/15.3.1/img/champion/\(session.playerChampion).png"),
+            size: 50
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(
+                    teamBorderGradient,
+                    lineWidth: 2.5
+                )
+        }
     }
 
-    private func phaseColor(for phase: GamePhase) -> Color {
-        switch phase {
-        case .early: Color(hex: 0x22C55E)
-        case .mid: Color(hex: 0xF59E0B)
-        case .late: Color(hex: 0xEF4444)
+    private var teamBorderGradient: LinearGradient {
+        let color = DesignTokens.teamColor(for: session.playerTeam)
+        return LinearGradient(
+            colors: [color.opacity(0.9), color.opacity(0.4)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    // MARK: - Game Stats Row
+
+    @ViewBuilder
+    private var gameStatsRow: some View {
+        if let latest = session.latestAnalysis {
+            HStack(spacing: 10) {
+                // Game time
+                HStack(spacing: 3) {
+                    Image(systemName: "clock")
+                        .font(.caption2)
+                    Text("\(Int(latest.extraction.gameTimeMinutes))min")
+                        .font(.caption)
+                }
+                .foregroundStyle(.secondary)
+
+                // Team score with colors
+                HStack(spacing: 2) {
+                    Text("\(latest.extraction.blueTeam.kills)")
+                        .foregroundStyle(DesignTokens.teamBlue)
+                    Text("-")
+                        .foregroundStyle(DesignTokens.muted)
+                    Text("\(latest.extraction.redTeam.kills)")
+                        .foregroundStyle(DesignTokens.teamRed)
+                }
+                .font(.caption)
+                .fontWeight(.semibold)
+                .monospacedDigit()
+
+                // Phase indicator
+                Text(latest.gamePhase.displayName)
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundStyle(DesignTokens.phaseColor(for: latest.gamePhase))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(DesignTokens.phaseColor(for: latest.gamePhase).opacity(0.12))
+                    .clipShape(Capsule())
+            }
+        } else {
+            Text("Pas de donnees")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
         }
     }
 }

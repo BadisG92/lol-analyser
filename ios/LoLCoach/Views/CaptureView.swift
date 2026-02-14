@@ -5,9 +5,9 @@ import PhotosUI
 
 /// Screen where the player imports a TAB screenshot from their photo library.
 ///
-/// Shows a PhotosPicker, a preview of the selected image, a quality indicator
-/// (using `ImageProcessor.estimateQuality`), and an "Analyser" button that
-/// compresses the image and navigates to `GameView`.
+/// Redesigned as a clear 3-step funnel: Import -> Preview -> Analyze.
+/// Uses gaming-style step indicators, a prominent drop zone with pulsing
+/// animation, a progress-bar quality indicator, and GlowButton for the CTA.
 struct CaptureView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
@@ -19,40 +19,59 @@ struct CaptureView: View {
     @State private var navigateToGame = false
     @State private var gameViewModel = GameViewModel()
 
+    /// Pulse animation toggle for the empty drop zone.
+    @State private var isPulsing = false
+
+    /// Animated progress value for the analyze button spinner.
+    @State private var spinnerRotation: Double = 0
+
     /// Whether the quality is too low to proceed.
     private var isQualityTooLow: Bool {
         imageQuality == .poor
     }
 
+    /// Current step in the funnel (1-based).
+    private var currentStep: Int {
+        if selectedImage == nil { return 1 }
+        if isProcessing || !navigateToGame { return selectedImage != nil ? 2 : 1 }
+        return 3
+    }
+
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color(hex: 0x0A0E1A), Color(hex: 0x111827)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            DesignTokens.bgGradient
+                .ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: 28) {
                     instructionsCard
                     imagePickerSection
 
-                    if let image = selectedImage {
-                        imagePreviewSection(image: image)
-                    }
-
                     if let quality = imageQuality {
                         qualityIndicator(quality: quality)
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .bottom).combined(with: .opacity),
+                                removal: .opacity
+                            ))
                     }
 
                     if selectedImage != nil && !isQualityTooLow {
                         analyzeButton
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .bottom).combined(with: .opacity),
+                                removal: .opacity
+                            ))
+                    }
+
+                    if let error = gameViewModel.error {
+                        errorBanner(message: error)
                     }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
-                .padding(.bottom, 32)
+                .padding(.bottom, 40)
+                .animation(.easeInOut(duration: 0.35), value: selectedImage != nil)
+                .animation(.easeInOut(duration: 0.35), value: imageQuality)
             }
         }
         .navigationTitle("Capture")
@@ -66,137 +85,262 @@ struct CaptureView: View {
                 await loadImage(from: newValue)
             }
         }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
+                isPulsing = true
+            }
+        }
         .preferredColorScheme(.dark)
     }
 
-    // MARK: - Instructions
+    // MARK: - Instructions Card
 
     private var instructionsCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 16) {
+            // Header
             HStack(spacing: 8) {
-                Image(systemName: "lightbulb.fill")
-                    .foregroundStyle(Color(hex: 0xC89B3C))
+                Image(systemName: "gamecontroller.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(DesignTokens.gold)
                 Text("Comment faire")
                     .font(.subheadline)
-                    .fontWeight(.semibold)
+                    .fontWeight(.bold)
                     .foregroundStyle(.white)
+                Spacer()
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                instructionRow(number: "1", text: "Appuyez sur TAB en jeu")
-                instructionRow(number: "2", text: "Prenez un screenshot (capture d'ecran)")
-                instructionRow(number: "3", text: "Importez-le ici pour l'analyse")
+            // Step indicators with connecting lines
+            HStack(spacing: 0) {
+                stepIndicator(
+                    step: 1,
+                    icon: "keyboard",
+                    label: "TAB en jeu",
+                    isActive: currentStep >= 1
+                )
+
+                connectingLine(isActive: currentStep >= 2)
+
+                stepIndicator(
+                    step: 2,
+                    icon: "camera.viewfinder",
+                    label: "Screenshot",
+                    isActive: currentStep >= 2
+                )
+
+                connectingLine(isActive: currentStep >= 3)
+
+                stepIndicator(
+                    step: 3,
+                    icon: "arrow.up.doc",
+                    label: "Importer ici",
+                    isActive: currentStep >= 3
+                )
             }
         }
         .padding(16)
-        .background(Color(hex: 0x1A1F2E).opacity(0.8))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(DesignTokens.bgCard.opacity(0.85))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [
+                                    DesignTokens.gold.opacity(0.3),
+                                    DesignTokens.gold.opacity(0.05)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                )
+        )
     }
 
-    private func instructionRow(number: String, text: String) -> some View {
-        HStack(spacing: 10) {
-            Text(number)
-                .font(.caption)
-                .fontWeight(.bold)
-                .foregroundStyle(Color(hex: 0x0D7FD9))
-                .frame(width: 22, height: 22)
-                .background(Color(hex: 0x0D7FD9).opacity(0.2))
-                .clipShape(Circle())
+    private func stepIndicator(step: Int, icon: String, label: String, isActive: Bool) -> some View {
+        VStack(spacing: 6) {
+            ZStack {
+                Circle()
+                    .fill(
+                        isActive
+                            ? DesignTokens.blue.opacity(0.2)
+                            : DesignTokens.bgCardHover.opacity(0.5)
+                    )
+                    .frame(width: 44, height: 44)
 
-            Text(text)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+                Circle()
+                    .strokeBorder(
+                        isActive ? DesignTokens.blue : DesignTokens.muted.opacity(0.4),
+                        lineWidth: 1.5
+                    )
+                    .frame(width: 44, height: 44)
+
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(isActive ? DesignTokens.blue : DesignTokens.muted)
+            }
+
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(isActive ? .white.opacity(0.9) : DesignTokens.muted)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .frame(width: 70)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func connectingLine(isActive: Bool) -> some View {
+        VStack {
+            Rectangle()
+                .fill(
+                    isActive
+                        ? DesignTokens.blue.opacity(0.6)
+                        : DesignTokens.muted.opacity(0.25)
+                )
+                .frame(height: 2)
+                .frame(maxWidth: 40)
+                .offset(y: -10) // Align with step circles
+            Spacer()
+                .frame(height: 18)
         }
     }
 
-    // MARK: - PhotosPicker
+    // MARK: - PhotosPicker / Drop Zone
 
     private var imagePickerSection: some View {
         PhotosPicker(
             selection: $selectedItem,
             matching: .screenshots
         ) {
-            VStack(spacing: 16) {
-                if selectedImage == nil {
-                    Image(systemName: "photo.badge.plus")
-                        .font(.system(size: 40))
-                        .foregroundStyle(Color(hex: 0x0D7FD9))
-
-                    Text("Importer un screenshot")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-
-                    Text("Selectionnez la capture d'ecran TAB de votre game")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                } else {
-                    HStack(spacing: 8) {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.subheadline)
-                        Text("Changer de screenshot")
-                            .font(.subheadline)
-                    }
-                    .foregroundStyle(Color(hex: 0x0D7FD9))
-                }
+            if let image = selectedImage {
+                // Image selected state: prominent preview
+                imagePreviewContent(image: image)
+            } else {
+                // Empty state: large dashed drop zone with pulsing animation
+                emptyDropZone
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, selectedImage == nil ? 48 : 14)
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .strokeBorder(
-                        Color(hex: 0x0D7FD9).opacity(0.4),
-                        style: StrokeStyle(
-                            lineWidth: 2,
-                            dash: selectedImage == nil ? [8, 4] : []
-                        )
-                    )
-            )
-            .background(Color(hex: 0x0D7FD9).opacity(0.05))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .buttonStyle(.plain)
     }
 
-    // MARK: - Preview
+    private var emptyDropZone: some View {
+        VStack(spacing: 14) {
+            ZStack {
+                // Pulsing background circle
+                Circle()
+                    .fill(DesignTokens.blue.opacity(isPulsing ? 0.15 : 0.05))
+                    .frame(width: 80, height: 80)
+                    .scaleEffect(isPulsing ? 1.1 : 1.0)
 
-    private func imagePreviewSection(image: UIImage) -> some View {
-        VStack(spacing: 12) {
+                Image(systemName: "photo.badge.plus.fill")
+                    .font(.system(size: 36))
+                    .foregroundStyle(DesignTokens.blue)
+                    .symbolRenderingMode(.hierarchical)
+            }
+
+            Text("Importer un screenshot")
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundStyle(.white)
+
+            Text("Selectionnez la capture d'ecran TAB de votre game")
+                .font(.caption)
+                .foregroundStyle(DesignTokens.muted)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 20)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 52)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(DesignTokens.blue.opacity(0.04))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(
+                    DesignTokens.blue.opacity(isPulsing ? 0.5 : 0.25),
+                    style: StrokeStyle(lineWidth: 2, dash: [10, 6])
+                )
+        )
+    }
+
+    // MARK: - Image Preview (inside picker zone)
+
+    private func imagePreviewContent(image: UIImage) -> some View {
+        VStack(spacing: 14) {
+            // Preview image
             Image(uiImage: image)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .frame(maxHeight: 220)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(Color(hex: 0x1E293B), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(DesignTokens.bgCardHover, lineWidth: 1)
                 )
-                .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+                .shadow(color: DesignTokens.blue.opacity(0.2), radius: 16, y: 6)
+                .shadow(color: .black.opacity(0.4), radius: 8, y: 4)
 
+            // Metadata row
             HStack(spacing: 16) {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.left.and.right")
                         .font(.caption2)
                     Text("\(Int(image.size.width))px")
                         .font(.caption)
+                        .monospacedDigit()
                 }
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.up.and.down")
                         .font(.caption2)
                     Text("\(Int(image.size.height))px")
                         .font(.caption)
+                        .monospacedDigit()
                 }
             }
-            .foregroundStyle(.secondary)
+            .foregroundStyle(DesignTokens.muted)
+
+            // Change button
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.caption)
+                Text("Changer de screenshot")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+            }
+            .foregroundStyle(DesignTokens.blue)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 16)
+            .background(
+                Capsule()
+                    .fill(DesignTokens.blue.opacity(0.1))
+            )
+            .overlay(
+                Capsule()
+                    .strokeBorder(DesignTokens.blue.opacity(0.25), lineWidth: 1)
+            )
         }
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(DesignTokens.bgCard.opacity(0.6))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(DesignTokens.bgCardHover, lineWidth: 1)
+        )
     }
 
-    // MARK: - Quality Indicator
+    // MARK: - Quality Indicator (Progress Bar Style)
 
     private func qualityIndicator(quality: ImageQuality) -> some View {
         let color: Color = switch quality {
-        case .good: Color(hex: 0x22C55E)
-        case .acceptable: Color(hex: 0xF59E0B)
-        case .poor: Color(hex: 0xEF4444)
+        case .good: DesignTokens.phaseEarly
+        case .acceptable: DesignTokens.phaseMid
+        case .poor: DesignTokens.phaseLate
         }
 
         let icon: String = switch quality {
@@ -205,54 +349,172 @@ struct CaptureView: View {
         case .poor: "xmark.circle.fill"
         }
 
-        return HStack(spacing: 10) {
-            Image(systemName: icon)
-                .foregroundStyle(color)
+        let fillFraction: CGFloat = switch quality {
+        case .good: 1.0
+        case .acceptable: 0.6
+        case .poor: 0.25
+        }
 
+        let qualityLabel: String = switch quality {
+        case .good: "Bonne"
+        case .acceptable: "Acceptable"
+        case .poor: "Insuffisante"
+        }
+
+        return VStack(alignment: .leading, spacing: 10) {
+            // Header row: icon + label + quality badge
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.subheadline)
+                    .foregroundStyle(color)
+
+                Text("Qualite de l'image")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.white)
+
+                Spacer()
+
+                Text(qualityLabel)
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundStyle(color)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule()
+                            .fill(color.opacity(0.15))
+                    )
+            }
+
+            // Progress bar
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    // Track
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(DesignTokens.bgCardHover)
+                        .frame(height: 8)
+
+                    // Fill
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(
+                            LinearGradient(
+                                colors: [color.opacity(0.7), color],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: geo.size.width * fillFraction, height: 8)
+                        .animation(.easeOut(duration: 0.6), value: fillFraction)
+                }
+            }
+            .frame(height: 8)
+
+            // Description text
             Text(quality.displayMessage)
-                .font(.subheadline)
-                .foregroundStyle(color)
-                .lineLimit(2)
-
-            Spacer()
+                .font(.caption)
+                .foregroundStyle(DesignTokens.muted)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(14)
-        .background(color.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(color.opacity(0.06))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(color.opacity(0.15), lineWidth: 1)
+                )
+        )
     }
 
     // MARK: - Analyze Button
 
     private var analyzeButton: some View {
-        Button {
-            startAnalysis()
-        } label: {
-            HStack(spacing: 10) {
-                if isProcessing {
-                    ProgressView()
-                        .tint(.white)
-                } else {
+        Group {
+            if isProcessing {
+                // Animated processing state
+                HStack(spacing: 12) {
+                    // Rotating sparkle icon
                     Image(systemName: "sparkles")
                         .font(.title3)
+                        .foregroundStyle(.white)
+                        .rotationEffect(.degrees(spinnerRotation))
+                        .onAppear {
+                            withAnimation(.linear(duration: 2.0).repeatForever(autoreverses: false)) {
+                                spinnerRotation = 360
+                            }
+                        }
+                        .onDisappear {
+                            spinnerRotation = 0
+                        }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Analyse en cours...")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.white)
+
+                        // Indeterminate animated bar
+                        ProgressView()
+                            .progressViewStyle(.linear)
+                            .tint(.white.opacity(0.7))
+                    }
                 }
-                Text("Analyser")
-                    .font(.headline)
-            }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(
-                LinearGradient(
-                    colors: [Color(hex: 0x0A5CA8), Color(hex: 0x0D7FD9)],
-                    startPoint: .leading,
-                    endPoint: .trailing
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .padding(.horizontal, 20)
+                .background(
+                    LinearGradient(
+                        colors: [
+                            DesignTokens.blueDeep.opacity(0.7),
+                            DesignTokens.blue.opacity(0.7)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
                 )
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .shadow(color: Color(hex: 0x0D7FD9).opacity(0.4), radius: 12, y: 4)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .strokeBorder(.white.opacity(0.1), lineWidth: 1)
+                )
+            } else {
+                GlowButton(
+                    title: "Analyser",
+                    icon: "sparkles",
+                    gradient: [DesignTokens.blueDeep, DesignTokens.blue]
+                ) {
+                    startAnalysis()
+                }
+            }
         }
-        .disabled(isProcessing)
-        .buttonStyle(.plain)
+    }
+
+    // MARK: - Error Banner
+
+    private func errorBanner(message: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.octagon.fill")
+                .foregroundStyle(DesignTokens.phaseLate)
+
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.9))
+                .lineLimit(3)
+
+            Spacer()
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(DesignTokens.phaseLate.opacity(0.1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(DesignTokens.phaseLate.opacity(0.25), lineWidth: 1)
+                )
+        )
+        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
     // MARK: - Actions

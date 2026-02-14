@@ -2,144 +2,251 @@ import SwiftUI
 
 // MARK: - AnalysisCardView
 
-/// Displays a single screenshot analysis as a collapsible card.
-///
-/// Shows game stats (score, towers, drakes) in a compact bar,
-/// then parses the coaching text into thematic sections with icons:
-/// SITUATION, ACTION, BUILD, OBJECTIFS, TEAMFIGHT, WIN CONDITION, ERREUR.
+/// Displays a single screenshot analysis as a collapsible card with a
+/// game-HUD-style scoreboard, drake/objective icons, and themed coaching sections.
 struct AnalysisCardView: View {
     let analysis: ScreenshotAnalysis
 
     @State private var isExpanded = true
+
+    // MARK: Body
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             cardHeader
 
             if isExpanded {
-                Divider()
-                    .overlay(Color(hex: 0x1E293B))
+                // Gold accent line under header
+                Rectangle()
+                    .fill(DesignTokens.gold.opacity(0.5))
+                    .frame(height: 1)
 
                 statsBar
 
                 Divider()
-                    .overlay(Color(hex: 0x1E293B))
+                    .overlay(DesignTokens.bgCardHover)
+
+                objectivesBar
+
+                Divider()
+                    .overlay(DesignTokens.bgCardHover)
 
                 coachingContent
             }
         }
-        .background(Color(hex: 0x1A1F2E))
+        .background(DesignTokens.bgCard)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(Color(hex: 0x1E293B), lineWidth: 1)
+                .strokeBorder(DesignTokens.bgCardHover, lineWidth: 1)
         )
+        .animation(.easeInOut(duration: 0.3), value: isExpanded)
     }
 
     // MARK: - Header
 
     private var cardHeader: some View {
         Button {
-            withAnimation(.easeInOut(duration: 0.25)) {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                 isExpanded.toggle()
             }
         } label: {
             HStack(spacing: 10) {
-                // Phase badge
+                // Phase badge with glow
                 Text(analysis.gamePhase.displayName)
                     .font(.caption)
-                    .fontWeight(.semibold)
+                    .fontWeight(.bold)
+                    .textCase(.uppercase)
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(phaseColor)
-                    .clipShape(Capsule())
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule()
+                            .fill(DesignTokens.phaseColor(for: analysis.gamePhase))
+                    )
+                    .overlay(
+                        Capsule()
+                            .stroke(DesignTokens.phaseColor(for: analysis.gamePhase).opacity(0.6), lineWidth: 1)
+                    )
+                    .shadow(color: DesignTokens.phaseColor(for: analysis.gamePhase).opacity(0.5), radius: 6, y: 0)
 
-                // Time
+                // Game time
                 HStack(spacing: 4) {
-                    Image(systemName: "clock")
+                    Image(systemName: "clock.fill")
                         .font(.caption2)
                     Text("\(Int(analysis.extraction.gameTimeMinutes)) min")
-                        .font(.caption)
+                        .font(.callout)
+                        .fontWeight(.medium)
                 }
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DesignTokens.muted)
+
+                // Patch badge if present
+                if let patch = analysis.extraction.patch {
+                    Text("v\(patch)")
+                        .font(.caption2)
+                        .foregroundStyle(DesignTokens.muted)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(DesignTokens.bgCardHover)
+                        .clipShape(Capsule())
+                }
 
                 Spacer()
 
-                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                Image(systemName: "chevron.down")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(DesignTokens.muted)
+                    .rotationEffect(.degrees(isExpanded ? -180 : 0))
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.vertical, 14)
         }
         .buttonStyle(.plain)
     }
 
-    // MARK: - Stats Bar
+    // MARK: - Stats Bar (Mini Scoreboard)
 
     private var statsBar: some View {
         HStack(spacing: 0) {
-            statColumn(
-                icon: "sword.circle",
-                label: "Score",
-                blueValue: "\(analysis.extraction.blueTeam.kills)",
-                redValue: "\(analysis.extraction.redTeam.kills)"
-            )
+            // Blue side
+            VStack(spacing: 2) {
+                Text("BLUE")
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .foregroundStyle(DesignTokens.teamBlue.opacity(0.7))
+                    .tracking(1)
+            }
+            .frame(width: 50)
 
-            Divider()
-                .frame(height: 32)
-                .overlay(Color(hex: 0x1E293B))
+            Spacer()
 
-            statColumn(
-                icon: "building.columns",
-                label: "Tours",
-                blueValue: "\(analysis.extraction.blueTeam.towersDestroyed)",
-                redValue: "\(analysis.extraction.redTeam.towersDestroyed)"
-            )
+            // Score
+            HStack(spacing: 12) {
+                Text("\(analysis.extraction.blueTeam.kills)")
+                    .font(.system(size: 28, weight: .heavy, design: .rounded))
+                    .foregroundStyle(DesignTokens.teamBlue)
+                    .monospacedDigit()
 
-            Divider()
-                .frame(height: 32)
-                .overlay(Color(hex: 0x1E293B))
+                // Swords divider
+                VStack(spacing: 2) {
+                    Image(systemName: "bolt.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(DesignTokens.gold)
+                    Text("VS")
+                        .font(.system(size: 8, weight: .heavy, design: .rounded))
+                        .foregroundStyle(DesignTokens.muted)
+                }
 
-            statColumn(
-                icon: "flame",
-                label: "Drakes",
-                blueValue: "\(analysis.extraction.blueTeam.drakes.count)",
-                redValue: "\(analysis.extraction.redTeam.drakes.count)"
-            )
+                Text("\(analysis.extraction.redTeam.kills)")
+                    .font(.system(size: 28, weight: .heavy, design: .rounded))
+                    .foregroundStyle(DesignTokens.teamRed)
+                    .monospacedDigit()
+            }
+
+            Spacer()
+
+            // Red side
+            VStack(spacing: 2) {
+                Text("RED")
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .foregroundStyle(DesignTokens.teamRed.opacity(0.7))
+                    .tracking(1)
+            }
+            .frame(width: 50)
         }
-        .padding(.vertical, 8)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            LinearGradient(
+                stops: [
+                    .init(color: DesignTokens.teamBlue.opacity(0.06), location: 0),
+                    .init(color: .clear, location: 0.4),
+                    .init(color: .clear, location: 0.6),
+                    .init(color: DesignTokens.teamRed.opacity(0.06), location: 1),
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
     }
 
-    private func statColumn(icon: String, label: String, blueValue: String, redValue: String) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+    // MARK: - Objectives Bar
 
+    private var objectivesBar: some View {
+        HStack(spacing: 0) {
+            // Blue objectives
+            objectivesForTeam(analysis.extraction.blueTeam, color: DesignTokens.teamBlue)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Tower count center
             HStack(spacing: 6) {
-                Text(blueValue)
-                    .foregroundStyle(Color(hex: 0x4A9EEF))
-                Text("-")
-                    .foregroundStyle(.secondary)
-                Text(redValue)
-                    .foregroundStyle(Color(hex: 0xEF4444))
+                Text("\(analysis.extraction.blueTeam.towersDestroyed)")
+                    .foregroundStyle(DesignTokens.teamBlue)
+                Text("🏰")
+                Text("\(analysis.extraction.redTeam.towersDestroyed)")
+                    .foregroundStyle(DesignTokens.teamRed)
             }
             .font(.subheadline)
-            .fontWeight(.semibold)
+            .fontWeight(.bold)
+            .monospacedDigit()
 
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+            // Red objectives
+            objectivesForTeam(analysis.extraction.redTeam, color: DesignTokens.teamRed)
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+
+    private func objectivesForTeam(_ team: TeamExtracted, color: Color) -> some View {
+        HStack(spacing: 4) {
+            // Drakes
+            ForEach(Array(team.drakes.enumerated()), id: \.offset) { _, drake in
+                Text(drakeEmoji(for: drake))
+                    .font(.system(size: 14))
+            }
+
+            // Grubs
+            if team.grubs > 0 {
+                HStack(spacing: 1) {
+                    Text("\u{1FAB2}")
+                        .font(.system(size: 13))
+                    Text("\(team.grubs)")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundStyle(color)
+                }
+            }
+
+            // Herald
+            if team.herald {
+                Text("\u{1F980}")
+                    .font(.system(size: 13))
+            }
+
+            // Baron
+            if team.baron {
+                Text("\u{1F7E3}")
+                    .font(.system(size: 13))
+            }
+        }
+    }
+
+    private func drakeEmoji(for drake: String) -> String {
+        let lower = drake.lowercased()
+        if lower.contains("infernal") || lower.contains("inferno") { return "\u{1F525}" }
+        if lower.contains("mountain") { return "\u{1F3D4}\u{FE0F}" }
+        if lower.contains("ocean") { return "\u{1F30A}" }
+        if lower.contains("cloud") { return "\u{1F4A8}" }
+        if lower.contains("hextech") { return "\u{26A1}" }
+        if lower.contains("chemtech") { return "\u{2623}\u{FE0F}" }
+        // Fallback dragon
+        return "\u{1F409}"
     }
 
     // MARK: - Coaching Content
 
     private var coachingContent: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             let sections = Self.parseCoachingSections(analysis.coaching)
 
             if sections.isEmpty {
@@ -158,37 +265,100 @@ struct AnalysisCardView: View {
         .textSelection(.enabled)
     }
 
-    private func coachingSectionView(_ section: CoachingSection) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Text(section.icon)
-                    .font(.subheadline)
+    /// Known item names to detect and bold within BUILD section content.
+    private static let knownItemKeywords: [String] = [
+        // Mythics / popular items
+        "Infinity Edge", "Rabadon", "Zhonya", "Morellonomicon", "Void Staff",
+        "Luden", "Crown", "Liandry", "Riftmaker", "Everfrost",
+        "Trinity Force", "Divine Sunderer", "Goredrinker", "Stridebreaker",
+        "Galeforce", "Kraken Slayer", "Immortal Shieldbow",
+        "Sunfire", "Frostfire", "Turbo Chemtank",
+        "Moonstone", "Shurelya", "Imperial Mandate",
+        // Boots
+        "Berserker", "Sorcerer", "Plated Steelcaps", "Mercury",
+        "Boots of Swiftness", "Ionian", "Lucidity",
+        "bottes", "Bottes",
+        // Common items (FR + EN)
+        "Blade of the Ruined King", "BORK", "BotRK",
+        "Nashor", "Wit's End", "Phantom Dancer", "Rapid Firecannon",
+        "Thornmail", "Randuin", "Spirit Visage", "Force of Nature",
+        "Warmog", "Guardian Angel", "Banshee", "Edge of Night",
+        "Serpent", "Mortal Reminder", "Lord Dominik",
+        "Seraph", "Manamune", "Muramana", "Archangel",
+        "Hextech Rocketbelt", "Protobelt", "Night Harvester",
+        "Duskblade", "Eclipse", "Prowler", "Youmuu",
+        "Black Cleaver", "Death's Dance", "Sterak", "Maw",
+        "Redemption", "Staff of Flowing Water", "Ardent",
+        "Mikael", "Chemtech Putrifier",
+        "Collector", "Stormrazor", "Navori",
+        "Rageblade", "Runaan",
+        "Demonic Embrace", "Cosmic Drive", "Shadowflame",
+        "Jak'Sho", "Radiant Virtue", "Heartsteel",
+        "Rod of Ages", "Catalyst",
+        "Statikk", "Experimental Hexplate", "Voltaic Cyclosword",
+        "Hubris", "Opportunity", "Profane Hydra",
+        "item mythique", "item legendaire",
+    ]
 
-                Text(section.title)
-                    .font(.subheadline)
-                    .fontWeight(.bold)
-                    .foregroundStyle(section.color)
+    /// Returns an AttributedString with known item names bolded (for BUILD sections).
+    private static func attributedBuildContent(_ text: String) -> AttributedString {
+        var attributed = AttributedString(text)
+
+        for keyword in knownItemKeywords {
+            var searchRange = attributed.startIndex..<attributed.endIndex
+            while let range = attributed[searchRange].range(of: keyword, options: .caseInsensitive) {
+                attributed[range].font = .subheadline.bold()
+                attributed[range].foregroundColor = .white
+                if range.upperBound < attributed.endIndex {
+                    searchRange = range.upperBound..<attributed.endIndex
+                } else {
+                    break
+                }
             }
+        }
 
-            Text(section.content)
-                .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.85))
-                .lineSpacing(3)
+        return attributed
+    }
+
+    private func coachingSectionView(_ section: CoachingSection) -> some View {
+        HStack(alignment: .top, spacing: 0) {
+            // Colored left accent bar
+            RoundedRectangle(cornerRadius: 2)
+                .fill(section.color)
+                .frame(width: 4)
+
+            VStack(alignment: .leading, spacing: 8) {
+                // Section header
+                HStack(spacing: 6) {
+                    Text(section.icon)
+                        .font(.callout)
+
+                    Text(section.title)
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .foregroundStyle(section.color)
+                }
+
+                // Section content
+                if section.title == "BUILD" {
+                    Text(Self.attributedBuildContent(section.content))
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.88))
+                        .lineSpacing(4)
+                } else {
+                    Text(section.content)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.88))
+                        .lineSpacing(4)
+                }
+            }
+            .padding(.leading, 12)
+            .padding(.vertical, 2)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(section.color.opacity(0.08))
+        .background(DesignTokens.bgSecondary.opacity(0.5))
         .clipShape(RoundedRectangle(cornerRadius: 8))
-    }
-
-    // MARK: - Phase Color
-
-    private var phaseColor: Color {
-        switch analysis.gamePhase {
-        case .early: Color(hex: 0x22C55E)
-        case .mid: Color(hex: 0xF59E0B)
-        case .late: Color(hex: 0xEF4444)
-        }
     }
 
     // MARK: - Section Model
@@ -292,51 +462,97 @@ struct AnalysisCardView: View {
 
 #Preview {
     ScrollView {
-        AnalysisCardView(
-            analysis: ScreenshotAnalysis(
-                id: "preview-1",
-                timestamp: 15.5,
-                extraction: TabScreenExtraction(
-                    gameTimeMinutes: 15.5,
-                    blueTeam: TeamExtracted(
-                        kills: 8,
-                        towersDestroyed: 1,
-                        drakes: ["Infernal"],
-                        grubs: 2,
-                        herald: true,
-                        baron: false,
-                        players: []
+        VStack(spacing: 16) {
+            // Card 1 — Mid game with objectives
+            AnalysisCardView(
+                analysis: ScreenshotAnalysis(
+                    id: "preview-1",
+                    timestamp: 15.5,
+                    extraction: TabScreenExtraction(
+                        patch: "14.10",
+                        gameTimeMinutes: 15.5,
+                        blueTeam: TeamExtracted(
+                            kills: 12,
+                            towersDestroyed: 2,
+                            drakes: ["Infernal", "Ocean"],
+                            grubs: 3,
+                            herald: true,
+                            baron: false,
+                            players: []
+                        ),
+                        redTeam: TeamExtracted(
+                            kills: 7,
+                            towersDestroyed: 1,
+                            drakes: ["Mountain"],
+                            grubs: 0,
+                            herald: false,
+                            baron: false,
+                            players: []
+                        ),
+                        minimapObservations: "Good vision around dragon pit",
+                        additionalObservations: ""
                     ),
-                    redTeam: TeamExtracted(
-                        kills: 5,
-                        towersDestroyed: 0,
-                        drakes: [],
-                        grubs: 0,
-                        herald: false,
-                        baron: false,
-                        players: []
-                    ),
-                    minimapObservations: "Good vision",
-                    additionalObservations: ""
-                ),
-                coaching: """
-                SITUATION ACTUELLE: Vous etes en avantage de 3 kills avec un lead de CS confortable.
+                    coaching: """
+                    SITUATION ACTUELLE: Vous etes en avantage de 5 kills avec un lead de CS confortable. Deux drakes securises, bonne pression sur la map.
 
-                ACTION IMMEDIATE: Push mid et roam bot pour le drake.
+                    ACTION IMMEDIATE: Push mid et roam bot pour le prochain drake. Placez une ward de controle dans la riviere.
 
-                BUILD RECOMMANDE: Finissez votre item mythique et prenez des bottes.
+                    BUILD RECOMMANDE: Finissez votre Infinity Edge et prenez des Berserker Greaves. Ensuite visez un Phantom Dancer pour le DPS.
 
-                OBJECTIFS: Dragon infernal dans 45 secondes. Preparez la vision.
+                    OBJECTIFS: Dragon Ocean dans 45 secondes. Preparez la vision. Herald peut etre trade si necessaire.
 
-                TEAMFIGHT: Focus le carry AD ennemi. Gardez votre ultime pour le disengage.
+                    TEAMFIGHT: Focus le carry AD ennemi. Gardez votre ultime pour le disengage. Positionnez-vous derriere votre frontline.
 
-                WIN CONDITION: Votre composition scale mieux. Jouez pour le late game.
-                """,
-                gamePhase: .mid
+                    WIN CONDITION: Votre composition scale mieux en late game. Accumulez les drakes et jouez pour l'ame.
+
+                    ERREUR A EVITER: Ne pas overchase apres les kills. Convertissez les avantages en objectifs.
+                    """,
+                    gamePhase: .mid
+                )
             )
-        )
+
+            // Card 2 — Late game with baron
+            AnalysisCardView(
+                analysis: ScreenshotAnalysis(
+                    id: "preview-2",
+                    timestamp: 32.0,
+                    extraction: TabScreenExtraction(
+                        patch: nil,
+                        gameTimeMinutes: 32.0,
+                        blueTeam: TeamExtracted(
+                            kills: 22,
+                            towersDestroyed: 6,
+                            drakes: ["Infernal", "Ocean", "Cloud"],
+                            grubs: 5,
+                            herald: true,
+                            baron: true,
+                            players: []
+                        ),
+                        redTeam: TeamExtracted(
+                            kills: 18,
+                            towersDestroyed: 3,
+                            drakes: ["Hextech", "Chemtech"],
+                            grubs: 1,
+                            herald: false,
+                            baron: false,
+                            players: []
+                        ),
+                        minimapObservations: "Baron buff active, pushing top",
+                        additionalObservations: ""
+                    ),
+                    coaching: """
+                    SITUATION ACTUELLE: Baron buff actif. Avantage significatif en or et en objectifs. C'est le moment de closer.
+
+                    ACTION IMMEDIATE: Group mid avec le baron buff et forcez les tourelles. Ne splitpush pas seul.
+
+                    WIN CONDITION: Avec trois drakes et le baron, un dernier teamfight gagne vous donne le nexus.
+                    """,
+                    gamePhase: .late
+                )
+            )
+        }
         .padding()
     }
-    .background(Color(hex: 0x0A0E1A))
+    .background(DesignTokens.bgPrimary)
     .preferredColorScheme(.dark)
 }
