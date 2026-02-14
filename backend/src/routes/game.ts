@@ -82,6 +82,7 @@ game.post("/init", async (c) => {
 
           // Step 4: Create game session
           const sessionId = crypto.randomUUID();
+          const playerRank = playerDataMap.get(playerInfo.name)?.summoner.rank ?? "Gold";
           const session: GameSession = {
             id: sessionId,
             riot_id: riotId,
@@ -89,6 +90,7 @@ game.post("/init", async (c) => {
             player_team: playerInfo.team,
             player_role: playerInfo.role,
             player_champion: playerInfo.champion,
+            player_rank: playerRank,
             players_blue: [],
             players_red: [],
             analyses: [],
@@ -97,8 +99,6 @@ game.post("/init", async (c) => {
 
           // Step 5: Stream coaching
           send("status", { step: "coaching", message: "Le coach analyse la game..." });
-
-          const playerRank = playerDataMap.get(playerInfo.name)?.summoner.rank ?? "Gold";
           let fullCoaching = "";
           let streamingError = false;
 
@@ -251,7 +251,7 @@ game.post("/:id/analyze", async (c) => {
               riotId: session.riot_id,
               playerChampion: session.player_champion,
               playerRole: session.player_role,
-              playerRank: "Gold", // TODO: persist from init
+              playerRank: session.player_rank ?? "Gold",
               playerTeam: session.player_team,
               extraction,
               playerDataMap,
@@ -465,7 +465,7 @@ function enrichExtraction(extraction: TabScreenExtraction): EnrichedExtraction {
       })),
       summoner_spells: p.summoner_spells.map((spellName) => ({
         name: spellName,
-        icon: getSpellImageUrl(spellName),
+        icon: spellName ? getSpellImageUrl(spellName) : null,
       })),
       estimated_role: p.estimated_role,
     }));

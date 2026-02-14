@@ -69,7 +69,7 @@ export const ITEM_NAME_TO_ID: Record<string, number> = {
   "Hubris": 6697,
   "Opportunity": 6699,
   "Voltaic Cyclosword": 6698,
-  "Profane Hydra": 6698, // Verify ID on new patch
+  "Profane Hydra": 6700,
   "Eclipse": 6701,
 
   // AD / Bruiser
@@ -146,7 +146,7 @@ export const ITEM_NAME_TO_ID: Record<string, number> = {
   "Celestial Opposition": 3869,
   "Bloodsong": 3877,
   "Zaz'Zak's Realmspike": 3871,
-  "Solstice Sleigh": 3876,
+  "Solstice Sleigh": 3868,
 
   // Boots
   "Berserker's Greaves": 3006,

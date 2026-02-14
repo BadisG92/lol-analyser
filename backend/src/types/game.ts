@@ -51,6 +51,7 @@ export interface GameSession {
   player_team: Team;
   player_role: Role;
   player_champion: string;
+  player_rank: string;
   players_blue: PlayerEnriched[];
   players_red: PlayerEnriched[];
   analyses: ScreenshotAnalysis[];

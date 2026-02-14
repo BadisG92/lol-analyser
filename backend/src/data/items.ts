@@ -200,7 +200,6 @@ export const ITEMS: ItemRef[] = [
   { name: "Solstice Sleigh", gold: 0, category: "support", visual: "golden sleigh" },
   { name: "Bloodsong", gold: 0, category: "support", visual: "red musical blade" },
   { name: "Zaz'Zak's Realmspike", gold: 0, category: "support", visual: "void spike" },
-  { name: "Dream Maker", gold: 0, category: "support", visual: "dreamy eye" },
 ];
 
 /** All item names as a flat sorted array. */

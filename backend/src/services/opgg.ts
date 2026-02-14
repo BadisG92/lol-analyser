@@ -235,6 +235,11 @@ function mapRegion(region: string): string {
     oc1: "oce",
     tr1: "tr",
     ru: "ru",
+    ph2: "ph",
+    sg2: "sg",
+    th2: "th",
+    tw2: "tw",
+    vn2: "vn",
   };
   return map[region] ?? region;
 }
