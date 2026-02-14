@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Env } from "./types/env";
 import game from "./routes/game";
+import data from "./routes/data";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -19,6 +20,9 @@ app.get("/health", (c) => {
 
 // Game routes (the core MVP)
 app.route("/game", game);
+
+// Static data routes (items, champions, spells with DDragon images)
+app.route("/data", data);
 
 // 404 fallback
 app.notFound((c) => {

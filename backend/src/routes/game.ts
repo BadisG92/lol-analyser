@@ -10,6 +10,7 @@ import {
   detectGamePhase,
 } from "../services/coach";
 import { saveSession, getSession, addAnalysis, addUserSession } from "../services/cache";
+import { championIconUrl, getItemImageUrl, getSpellImageUrl, CURRENT_PATCH } from "../data/ddragon";
 
 const game = new Hono<{ Bindings: Env }>();
 
@@ -52,7 +53,7 @@ game.post("/init", async (c) => {
           // Step 1: Extract TAB screen
           send("status", { step: "extraction", message: "Analyse du screenshot..." });
           const extraction = await extractTabScreen(anthropic, imageBase64, mediaType);
-          send("extraction", extraction);
+          send("extraction", enrichExtraction(extraction));
 
           // Step 2: Identify the player in the game
           const playerInfo = findPlayer(extraction, riotId);
@@ -204,7 +205,7 @@ game.post("/:id/analyze", async (c) => {
           // Step 1: Extract TAB screen
           send("status", { step: "extraction", message: "Analyse du screenshot..." });
           const extraction = await extractTabScreen(anthropic, imageBase64, mediaType);
-          send("extraction", extraction);
+          send("extraction", enrichExtraction(extraction));
 
           // Step 2: Rebuild player data map from session
           const allPlayers = [
@@ -404,6 +405,86 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
     binary += String.fromCharCode(...slice);
   }
   return btoa(binary);
+}
+
+// ── Helper: enrich extraction with DDragon image URLs ──
+
+interface PlayerWithImages {
+  name: string;
+  champion: string;
+  champion_icon: string;
+  level: number;
+  kills: number;
+  deaths: number;
+  assists: number;
+  cs: number;
+  items: Array<{ name: string | null; icon: string | null }>;
+  summoner_spells: Array<{ name: string; icon: string | null }>;
+  estimated_role: string;
+}
+
+interface EnrichedExtraction {
+  patch: string;
+  game_time_minutes: number;
+  blue_team: {
+    kills: number;
+    towers_destroyed: number;
+    drakes: string[];
+    grubs: number;
+    herald: boolean;
+    baron: boolean;
+    players: PlayerWithImages[];
+  };
+  red_team: {
+    kills: number;
+    towers_destroyed: number;
+    drakes: string[];
+    grubs: number;
+    herald: boolean;
+    baron: boolean;
+    players: PlayerWithImages[];
+  };
+  minimap_observations: string;
+  additional_observations: string;
+}
+
+function enrichExtraction(extraction: TabScreenExtraction): EnrichedExtraction {
+  function enrichPlayers(players: TabScreenExtraction["blue_team"]["players"]): PlayerWithImages[] {
+    return players.map((p) => ({
+      name: p.name,
+      champion: p.champion,
+      champion_icon: championIconUrl(p.champion),
+      level: p.level,
+      kills: p.kills,
+      deaths: p.deaths,
+      assists: p.assists,
+      cs: p.cs,
+      items: p.items.map((itemName) => ({
+        name: itemName,
+        icon: itemName ? getItemImageUrl(itemName) : null,
+      })),
+      summoner_spells: p.summoner_spells.map((spellName) => ({
+        name: spellName,
+        icon: getSpellImageUrl(spellName),
+      })),
+      estimated_role: p.estimated_role,
+    }));
+  }
+
+  return {
+    patch: CURRENT_PATCH,
+    game_time_minutes: extraction.game_time_minutes,
+    blue_team: {
+      ...extraction.blue_team,
+      players: enrichPlayers(extraction.blue_team.players),
+    },
+    red_team: {
+      ...extraction.red_team,
+      players: enrichPlayers(extraction.red_team.players),
+    },
+    minimap_observations: extraction.minimap_observations,
+    additional_observations: extraction.additional_observations,
+  };
 }
 
 export default game;

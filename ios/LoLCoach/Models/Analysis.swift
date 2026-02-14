@@ -16,6 +16,7 @@ struct TeamExtracted: Codable {
 }
 
 struct TabScreenExtraction: Codable {
+    let patch: String?
     let gameTimeMinutes: Double
     let blueTeam: TeamExtracted
     let redTeam: TeamExtracted
@@ -23,6 +24,7 @@ struct TabScreenExtraction: Codable {
     let additionalObservations: String
 
     enum CodingKeys: String, CodingKey {
+        case patch
         case gameTimeMinutes = "game_time_minutes"
         case blueTeam = "blue_team"
         case redTeam = "red_team"

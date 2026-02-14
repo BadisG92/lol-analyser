@@ -48,18 +48,47 @@ enum Team: String, Codable {
     case blue, red
 }
 
+// MARK: - Item & Spell with DDragon icons
+
+struct ItemSlot: Codable {
+    let name: String?
+    let icon: String?
+
+    /// Display name (or "Empty" for empty slots).
+    var displayName: String { name ?? "Empty" }
+
+    /// DDragon icon URL, if available.
+    var iconURL: URL? {
+        guard let icon else { return nil }
+        return URL(string: icon)
+    }
+}
+
+struct SpellSlot: Codable {
+    let name: String
+    let icon: String?
+
+    var iconURL: URL? {
+        guard let icon else { return nil }
+        return URL(string: icon)
+    }
+}
+
+// MARK: - Player (enriched with DDragon images)
+
 struct Player: Codable, Identifiable {
     var id: String { name }
 
     let name: String
     let champion: String
+    let championIcon: String?
     let level: Int
     let kills: Int
     let deaths: Int
     let assists: Int
     let cs: Int
-    let items: [String]
-    let summonerSpells: [String]
+    let items: [ItemSlot]
+    let summonerSpells: [SpellSlot]
     let estimatedRole: Role
 
     var kda: String {
@@ -70,8 +99,19 @@ struct Player: Codable, Identifiable {
         deaths == 0 ? Double(kills + assists) : Double(kills + assists) / Double(deaths)
     }
 
+    var championIconURL: URL? {
+        guard let championIcon else { return nil }
+        return URL(string: championIcon)
+    }
+
+    /// Completed items only (non-null names).
+    var completedItems: [ItemSlot] {
+        items.filter { $0.name != nil }
+    }
+
     enum CodingKeys: String, CodingKey {
         case name, champion, level, kills, deaths, assists, cs, items
+        case championIcon = "champion_icon"
         case summonerSpells = "summoner_spells"
         case estimatedRole = "estimated_role"
     }
