@@ -108,6 +108,7 @@ export const CHAMPIONS: ChampionRef[] = [
   { id: "Malzahar", name: "Malzahar", tags: ["Mage", "Assassin"], roles: ["mid"] },
   { id: "Maokai", name: "Maokai", tags: ["Tank", "Mage"], roles: ["support", "jungle"] },
   { id: "MasterYi", name: "Master Yi", tags: ["Assassin", "Fighter"], roles: ["jungle"] },
+  { id: "Mel", name: "Mel", tags: ["Mage"], roles: ["mid"] },
   { id: "Milio", name: "Milio", tags: ["Support"], roles: ["support"] },
   { id: "MissFortune", name: "Miss Fortune", tags: ["Marksman"], roles: ["adc"] },
   { id: "Mordekaiser", name: "Mordekaiser", tags: ["Fighter", "Mage"], roles: ["top"] },
@@ -191,7 +192,7 @@ export const CHAMPIONS: ChampionRef[] = [
   { id: "Volibear", name: "Volibear", tags: ["Fighter", "Tank"], roles: ["top", "jungle"] },
   // W
   { id: "Warwick", name: "Warwick", tags: ["Fighter", "Tank"], roles: ["jungle", "top"] },
-  { id: "Wukong", name: "Wukong", tags: ["Fighter", "Tank"], roles: ["jungle", "top"] },
+  { id: "MonkeyKing", name: "Wukong", tags: ["Fighter", "Tank"], roles: ["jungle", "top"] },
   // X
   { id: "Xayah", name: "Xayah", tags: ["Marksman"], roles: ["adc"] },
   { id: "Xerath", name: "Xerath", tags: ["Mage"], roles: ["support", "mid"] },

@@ -235,7 +235,7 @@ export function buildItemReferenceForExtraction(): string {
   const displayOrder: ItemCategory[] = [
     "ad_crit", "ad_lethality", "ap", "attack_speed",
     "tank_armor", "tank_mr", "tank_health",
-    "support", "boots", "starter", "component",
+    "support", "boots", "jungle", "starter", "component",
   ];
 
   for (const cat of displayOrder) {
