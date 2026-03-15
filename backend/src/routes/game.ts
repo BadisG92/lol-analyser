@@ -32,6 +32,11 @@ game.post("/init", async (c) => {
     return c.json({ error: "Missing image, riot_id, or region" }, 400);
   }
 
+  // Reject oversized images to prevent Worker OOM (5 MB limit)
+  if (imageFile.size > 5 * 1024 * 1024) {
+    return c.json({ error: "Image too large (max 5 MB). Use JPEG for smaller file size." }, 413);
+  }
+
   // Read image as base64 (chunk-safe for large images on Workers)
   const imageBuffer = await imageFile.arrayBuffer();
   const imageBase64 = arrayBufferToBase64(imageBuffer);
@@ -196,6 +201,11 @@ game.post("/:id/analyze", async (c) => {
 
   if (!imageFile) {
     return c.json({ error: "Missing image" }, 400);
+  }
+
+  // Reject oversized images to prevent Worker OOM (5 MB limit)
+  if (imageFile.size > 5 * 1024 * 1024) {
+    return c.json({ error: "Image too large (max 5 MB). Use JPEG for smaller file size." }, 413);
   }
 
   const session = await getSession(c.env.CACHE, sessionId);
