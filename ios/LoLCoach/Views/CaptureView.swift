@@ -295,14 +295,14 @@ struct CaptureView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.left.and.right")
                         .font(.caption2)
-                    Text("\(Int(image.size.width))px")
+                    Text("\(Int(image.size.width * image.scale))px")
                         .font(.caption)
                         .monospacedDigit()
                 }
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.up.and.down")
                         .font(.caption2)
-                    Text("\(Int(image.size.height))px")
+                    Text("\(Int(image.size.height * image.scale))px")
                         .font(.caption)
                         .monospacedDigit()
                 }

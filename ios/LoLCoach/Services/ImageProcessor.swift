@@ -150,7 +150,8 @@ enum ImageProcessor {
     /// - Parameter image: The `UIImage` to evaluate.
     /// - Returns: An `ImageQuality` assessment.
     static func estimateQuality(image: UIImage) -> ImageQuality {
-        let longestSide = max(image.size.width, image.size.height)
+        let scale = image.scale
+        let longestSide = max(image.size.width * scale, image.size.height * scale)
 
         if longestSide >= goodQualityThreshold {
             return .good
@@ -223,11 +224,11 @@ extension UIImage {
             transform = transform.rotated(by: .pi)
 
         case .left, .leftMirrored:
-            transform = transform.translatedBy(x: CGFloat(width), y: 0)
+            transform = transform.translatedBy(x: CGFloat(height), y: 0)
             transform = transform.rotated(by: .pi / 2)
 
         case .right, .rightMirrored:
-            transform = transform.translatedBy(x: 0, y: CGFloat(height))
+            transform = transform.translatedBy(x: 0, y: CGFloat(width))
             transform = transform.rotated(by: -.pi / 2)
 
         case .up, .upMirrored:

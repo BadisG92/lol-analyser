@@ -547,7 +547,8 @@ struct GameView: View {
     /// Resolves the player summoner name for scoreboard highlighting.
     private var resolvedPlayerName: String? {
         if isReview {
-            return session?.riotId
+            // Riot ID is "Name#Tag", but scoreboard uses just the name part
+            return session?.riotId.split(separator: "#").first.map(String.init)
         }
         return gameViewModel.playerInfo?.name
     }
