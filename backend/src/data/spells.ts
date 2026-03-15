@@ -20,7 +20,7 @@ export const SUMMONER_SPELLS: SpellRef[] = [
   { name: "Ghost", key: "SummonerHaste", cooldown: 210, visual: "blue ghostly trail" },
   { name: "Barrier", key: "SummonerBarrier", cooldown: 180, visual: "orange/gold shield dome" },
   { name: "Cleanse", key: "SummonerBoost", cooldown: 210, visual: "teal/turquoise water splash" },
-  { name: "Smite", key: "SummonerSmite", cooldown: 15, visual: "orange/red sword strike" },
+  { name: "Smite", key: "SummonerSmite", cooldown: 90, visual: "orange/red sword strike" },
 ];
 
 export const SPELL_NAMES: string[] = SUMMONER_SPELLS.map((s) => s.name);
