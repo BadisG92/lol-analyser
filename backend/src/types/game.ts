@@ -28,6 +28,7 @@ export interface TeamExtracted {
 }
 
 export interface TabScreenExtraction {
+  patch?: string;
   game_time_minutes: number;
   blue_team: TeamExtracted;
   red_team: TeamExtracted;
