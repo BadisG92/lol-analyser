@@ -25,6 +25,9 @@ struct CaptureView: View {
     /// Animated progress value for the analyze button spinner.
     @State private var spinnerRotation: Double = 0
 
+    /// Track image loading task to cancel on rapid re-selection.
+    @State private var loadImageTask: Task<Void, Never>?
+
     /// Whether the quality is too low to proceed.
     private var isQualityTooLow: Bool {
         imageQuality == .poor
@@ -81,7 +84,8 @@ struct CaptureView: View {
             GameView(gameViewModel: gameViewModel)
         }
         .onChange(of: selectedItem) { _, newValue in
-            Task {
+            loadImageTask?.cancel()
+            loadImageTask = Task {
                 await loadImage(from: newValue)
             }
         }

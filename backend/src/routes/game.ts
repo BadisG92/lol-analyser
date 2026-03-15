@@ -55,10 +55,16 @@ game.post("/init", async (c) => {
     new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
+        let streamClosed = false;
         const send = (event: string, data: unknown) => {
-          controller.enqueue(
-            encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
-          );
+          if (streamClosed) return;
+          try {
+            controller.enqueue(
+              encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+            );
+          } catch {
+            streamClosed = true;
+          }
         };
 
         try {
@@ -229,10 +235,16 @@ game.post("/:id/analyze", async (c) => {
     new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
+        let streamClosed = false;
         const send = (event: string, data: unknown) => {
-          controller.enqueue(
-            encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
-          );
+          if (streamClosed) return;
+          try {
+            controller.enqueue(
+              encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+            );
+          } catch {
+            streamClosed = true;
+          }
         };
 
         try {
