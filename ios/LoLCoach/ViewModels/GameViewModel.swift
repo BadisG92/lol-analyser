@@ -153,8 +153,8 @@ final class GameViewModel {
                     // Build the analysis from accumulated data
                     if let extraction = currentExtraction {
                         let analysis = ScreenshotAnalysis(
-                            id: UUID().uuidString,
-                            timestamp: Date().timeIntervalSince1970,
+                            id: done.analysisId ?? UUID().uuidString,
+                            timestamp: Date().timeIntervalSince1970 * 1000,
                             extraction: extraction,
                             coaching: coachingText,
                             gamePhase: done.phase
