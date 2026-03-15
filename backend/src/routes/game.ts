@@ -34,7 +34,13 @@ game.post("/init", async (c) => {
   // Read image as base64 (chunk-safe for large images on Workers)
   const imageBuffer = await imageFile.arrayBuffer();
   const imageBase64 = arrayBufferToBase64(imageBuffer);
-  const mediaType = imageFile.type as "image/jpeg" | "image/png" | "image/webp";
+
+  // Validate media type before sending to Anthropic
+  const validMediaTypes = ["image/jpeg", "image/png", "image/webp"] as const;
+  const rawMediaType = imageFile.type;
+  const mediaType = validMediaTypes.includes(rawMediaType as typeof validMediaTypes[number])
+    ? (rawMediaType as "image/jpeg" | "image/png" | "image/webp")
+    : "image/jpeg"; // Default to JPEG for unrecognized types
 
   const anthropic = new Anthropic({ apiKey: c.env.ANTHROPIC_API_KEY });
 
@@ -83,6 +89,13 @@ game.post("/init", async (c) => {
           // Step 4: Create game session
           const sessionId = crypto.randomUUID();
           const playerRank = playerDataMap.get(playerInfo.name)?.summoner.rank ?? "Gold";
+
+          // Serialize player data map so mid-game analyses can reuse OP.GG data
+          const playerDataSerialized: Record<string, { summoner: { raw: string; rank: string; winRate: number; gamesPlayed: number }; build: { raw: string } }> = {};
+          for (const [name, data] of playerDataMap) {
+            playerDataSerialized[name] = data;
+          }
+
           const session: GameSession = {
             id: sessionId,
             riot_id: riotId,
@@ -93,6 +106,7 @@ game.post("/init", async (c) => {
             player_rank: playerRank,
             players_blue: [],
             players_red: [],
+            player_data: playerDataSerialized,
             analyses: [],
             created_at: Date.now(),
           };
@@ -131,10 +145,13 @@ game.post("/init", async (c) => {
           if (streamingError) return;
 
           // Step 6: Save session with first analysis
+          // Store the enriched extraction (with DDragon URLs) so the REST API
+          // returns data in the same shape the iOS app expects.
+          const enrichedData = enrichExtraction(extraction);
           const analysis: ScreenshotAnalysis = {
             id: crypto.randomUUID(),
             timestamp: Date.now(),
-            extraction,
+            extraction: enrichedData as unknown as TabScreenExtraction,
             coaching: fullCoaching,
             game_phase: detectGamePhase(extraction.game_time_minutes),
           };
@@ -187,7 +204,13 @@ game.post("/:id/analyze", async (c) => {
 
   const imageBuffer = await imageFile.arrayBuffer();
   const imageBase64 = arrayBufferToBase64(imageBuffer);
-  const mediaType = imageFile.type as "image/jpeg" | "image/png" | "image/webp";
+
+  // Validate media type before sending to Anthropic
+  const validMediaTypes = ["image/jpeg", "image/png", "image/webp"] as const;
+  const rawMediaType = imageFile.type;
+  const mediaType = validMediaTypes.includes(rawMediaType as typeof validMediaTypes[number])
+    ? (rawMediaType as "image/jpeg" | "image/png" | "image/webp")
+    : "image/jpeg";
 
   const anthropic = new Anthropic({ apiKey: c.env.ANTHROPIC_API_KEY });
 
@@ -207,31 +230,31 @@ game.post("/:id/analyze", async (c) => {
           const extraction = await extractTabScreen(anthropic, imageBase64, mediaType);
           send("extraction", enrichExtraction(extraction));
 
-          // Step 2: Rebuild player data map from session
-          const allPlayers = [
-            ...extraction.blue_team.players.map((p) => ({
-              name: p.name,
-              champion: p.champion,
-              role: p.estimated_role,
-            })),
-            ...extraction.red_team.players.map((p) => ({
-              name: p.name,
-              champion: p.champion,
-              role: p.estimated_role,
-            })),
-          ];
-
-          // For mid-game, we don't re-fetch OP.GG — use cached data from init
-          // Build a minimal map from what we have
+          // Step 2: Rebuild player data map from session's cached OP.GG data
           const playerDataMap = new Map<string, {
             summoner: { raw: string; rank: string; winRate: number; gamesPlayed: number };
             build: { raw: string };
           }>();
-          for (const p of allPlayers) {
-            playerDataMap.set(p.name, {
-              summoner: { raw: "", rank: "Unknown", winRate: 50, gamesPlayed: 0 },
-              build: { raw: "" },
-            });
+
+          // Restore cached player data from the session (saved during init)
+          if (session.player_data) {
+            for (const [name, data] of Object.entries(session.player_data)) {
+              playerDataMap.set(name, data);
+            }
+          }
+
+          // Fill in any new/unrecognized players with defaults
+          const allPlayers = [
+            ...extraction.blue_team.players.map((p) => p.name),
+            ...extraction.red_team.players.map((p) => p.name),
+          ];
+          for (const name of allPlayers) {
+            if (!playerDataMap.has(name)) {
+              playerDataMap.set(name, {
+                summoner: { raw: "", rank: "Unknown", winRate: 50, gamesPlayed: 0 },
+                build: { raw: "" },
+              });
+            }
           }
 
           // Step 3: Stream coaching with context
@@ -274,11 +297,12 @@ game.post("/:id/analyze", async (c) => {
           // send a "done" event — the client already received "error".
           if (streamingError) return;
 
-          // Step 4: Save analysis
+          // Step 4: Save analysis (enriched with DDragon URLs)
+          const enrichedData = enrichExtraction(extraction);
           const analysis: ScreenshotAnalysis = {
             id: crypto.randomUUID(),
             timestamp: Date.now(),
-            extraction,
+            extraction: enrichedData as unknown as TabScreenExtraction,
             coaching: fullCoaching,
             game_phase: detectGamePhase(extraction.game_time_minutes),
           };

@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SwiftData
 import UIKit
 
 @Observable
@@ -15,6 +16,9 @@ final class GameViewModel {
     var error: String?
     var analyses: [ScreenshotAnalysis] = []
     var isStreaming = false
+
+    /// Set to true once the game session has been persisted to SwiftData.
+    private var sessionSaved = false
 
     private var streamingTask: Task<Void, Never>?
 
@@ -190,6 +194,45 @@ final class GameViewModel {
         }
     }
 
+    // MARK: - Persistence
+
+    /// Save or update the current game session in SwiftData.
+    /// Call this after each "done" event so history is populated.
+    func saveToSwiftData(context: ModelContext, riotId: String? = nil, region: Region? = nil) {
+        guard let gid = gameId,
+              let player = playerInfo else { return }
+
+        let role = player.role
+        let team = player.team
+        let sessionRegion = region ?? .euw1
+
+        // Try to find existing session
+        let descriptor = FetchDescriptor<GameSession>(
+            predicate: #Predicate { $0.id == gid }
+        )
+        let existing = try? context.fetch(descriptor).first
+
+        if let session = existing {
+            // Update analyses
+            session.analyses = analyses
+        } else {
+            // Create new session
+            let session = GameSession(
+                id: gid,
+                riotId: riotId ?? player.name,
+                region: sessionRegion,
+                playerTeam: team,
+                playerRole: role,
+                playerChampion: player.champion
+            )
+            session.analyses = analyses
+            context.insert(session)
+        }
+
+        try? context.save()
+        sessionSaved = true
+    }
+
     // MARK: - Private
 
     private func resetState() {
@@ -201,5 +244,6 @@ final class GameViewModel {
         gamePhase = nil
         error = nil
         statusMessage = ""
+        sessionSaved = false
     }
 }

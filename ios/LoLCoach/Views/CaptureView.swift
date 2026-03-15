@@ -85,6 +85,13 @@ struct CaptureView: View {
                 await loadImage(from: newValue)
             }
         }
+        .onChange(of: navigateToGame) { _, isNavigating in
+            // Reset isProcessing when the user returns from GameView
+            // (navigateToGame flips back to false when the view is dismissed)
+            if !isNavigating {
+                isProcessing = false
+            }
+        }
         .onAppear {
             withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
                 isPulsing = true

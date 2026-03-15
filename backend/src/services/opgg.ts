@@ -65,17 +65,25 @@ class OPGGClient {
         // Some lines may not be JSON (SSE data: prefix etc.)
         const jsonMatch = line.match(/^data:\s*(.+)/);
         if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[1]) as MCPResponse;
-          if (parsed.result !== undefined) return parsed.result;
-          if (parsed.error) throw new Error(parsed.error.message);
+          try {
+            const parsed = JSON.parse(jsonMatch[1]) as MCPResponse;
+            if (parsed.result !== undefined) return parsed.result;
+            if (parsed.error) throw new Error(parsed.error.message);
+          } catch {
+            // data: line contained invalid JSON — skip it
+          }
         }
       }
     }
 
     // Try parsing the entire response as a single JSON object
-    const single = JSON.parse(text) as MCPResponse;
-    if (single.result !== undefined) return single.result;
-    if (single.error) throw new Error(single.error.message);
+    try {
+      const single = JSON.parse(text) as MCPResponse;
+      if (single.result !== undefined) return single.result;
+      if (single.error) throw new Error(single.error.message);
+    } catch {
+      // Response is not a single JSON object — fall through to error
+    }
 
     throw new Error("No result in MCP response");
   }

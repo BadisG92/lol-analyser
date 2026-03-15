@@ -24,14 +24,30 @@ export async function extractTabScreen(
     ],
   });
 
+  if (!response.content || response.content.length === 0) {
+    throw new Error("Extraction failed: Claude returned an empty response. The image may be unreadable.");
+  }
+
   const text =
     response.content[0].type === "text" ? response.content[0].text : "";
+
+  if (!text.trim()) {
+    throw new Error("Extraction failed: Claude returned no text. The image may not contain a TAB screen.");
+  }
 
   // Extract JSON robustly: Haiku may wrap JSON in code fences or surrounding text.
   // Strategy: find the outermost { ... } JSON object in the response.
   const jsonStr = extractJsonFromText(text);
 
-  const parsed = JSON.parse(jsonStr) as TabScreenExtraction;
+  let parsed: TabScreenExtraction;
+  try {
+    parsed = JSON.parse(jsonStr) as TabScreenExtraction;
+  } catch {
+    throw new Error(
+      "Extraction failed: could not parse the response as JSON. " +
+      "The screenshot may not be a valid TAB screen."
+    );
+  }
   return validateExtraction(parsed);
 }
 
@@ -42,7 +58,7 @@ export async function extractTabScreen(
 function extractJsonFromText(text: string): string {
   // 1. Try stripping markdown code fences (handles ```json ... ``` anywhere)
   const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  if (fenceMatch) return fenceMatch[1];
+  if (fenceMatch && fenceMatch[1].trim().startsWith("{")) return fenceMatch[1];
 
   // 2. Find the first '{' and the matching last '}' — the outermost JSON object
   const firstBrace = text.indexOf("{");
@@ -97,7 +113,20 @@ function validateExtraction(data: TabScreenExtraction): TabScreenExtraction {
     for (const player of team.players) {
       if (!player.name) player.name = "Unknown";
       if (!player.champion) player.champion = "Unknown";
-      if (!player.estimated_role) player.estimated_role = "mid";
+      const validRoles = ["top", "jungle", "mid", "adc", "support"];
+      if (!player.estimated_role || !validRoles.includes(player.estimated_role)) {
+        // Map common alternatives to canonical role names
+        const roleStr = String(player.estimated_role ?? "").toLowerCase();
+        if (roleStr === "bot" || roleStr === "marksman" || roleStr === "carry") {
+          player.estimated_role = "adc";
+        } else if (roleStr === "supp" || roleStr === "sup") {
+          player.estimated_role = "support";
+        } else if (roleStr === "jg" || roleStr === "jng") {
+          player.estimated_role = "jungle";
+        } else {
+          player.estimated_role = "mid";
+        }
+      }
       player.kills = Math.max(0, player.kills ?? 0);
       player.deaths = Math.max(0, player.deaths ?? 0);
       player.assists = Math.max(0, player.assists ?? 0);

@@ -77,7 +77,9 @@ struct SpellSlot: Codable {
 // MARK: - Player (enriched with DDragon images)
 
 struct Player: Codable, Identifiable {
-    var id: String { name }
+    /// Unique identifier combining name and champion to avoid collisions
+    /// when two players on different teams share the same name.
+    var id: String { "\(name)-\(champion)" }
 
     let name: String
     let champion: String

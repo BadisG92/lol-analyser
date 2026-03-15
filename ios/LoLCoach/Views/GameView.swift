@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import PhotosUI
 
 // MARK: - GameView
@@ -13,6 +14,7 @@ import PhotosUI
 struct GameView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
 
     @State var gameViewModel: GameViewModel
     var session: GameSession?
@@ -122,6 +124,16 @@ struct GameView: View {
         .onChange(of: selectedItem) { _, newValue in
             Task {
                 await handleNewScreenshot(item: newValue)
+            }
+        }
+        .onChange(of: gameViewModel.analyses.count) { oldCount, newCount in
+            // Persist to SwiftData whenever a new analysis completes
+            if !isReview && newCount > oldCount {
+                gameViewModel.saveToSwiftData(
+                    context: modelContext,
+                    riotId: appState.riotId,
+                    region: appState.region
+                )
             }
         }
         .onDisappear {
@@ -420,22 +432,42 @@ struct GameView: View {
     // MARK: - Error Card
 
     private func errorCard(message: String) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(DesignTokens.teamRed)
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(DesignTokens.teamRed)
 
-            Text(message)
-                .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.8))
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.8))
 
-            Spacer()
-
-            Button("Reessayer") {
-                gameViewModel.error = nil
+                Spacer()
             }
-            .font(.caption)
-            .fontWeight(.semibold)
-            .foregroundStyle(DesignTokens.blue)
+
+            HStack(spacing: 12) {
+                Spacer()
+
+                Button("Ignorer") {
+                    gameViewModel.error = nil
+                }
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundStyle(DesignTokens.muted)
+
+                PhotosPicker(
+                    selection: $selectedItem,
+                    matching: .screenshots
+                ) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.caption)
+                        Text("Reessayer")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundStyle(DesignTokens.blue)
+                }
+            }
         }
         .padding(14)
         .background(DesignTokens.teamRed.opacity(0.1))

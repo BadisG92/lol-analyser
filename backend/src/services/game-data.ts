@@ -19,7 +19,13 @@ export async function getCurrentPatch(cache?: KVNamespace): Promise<string> {
   }
 
   const resp = await fetch(`${DDRAGON_BASE}/api/versions.json`);
+  if (!resp.ok) {
+    throw new Error(`Failed to fetch DDragon versions: ${resp.status} ${resp.statusText}`);
+  }
   const versions = (await resp.json()) as string[];
+  if (!versions || versions.length === 0) {
+    throw new Error("DDragon versions response is empty");
+  }
   const version = versions[0];
 
   if (cache) {
@@ -53,6 +59,9 @@ export async function getItems(
   const resp = await fetch(
     `${DDRAGON_BASE}/cdn/${version}/data/en_US/item.json`
   );
+  if (!resp.ok) {
+    throw new Error(`Failed to fetch DDragon items: ${resp.status}`);
+  }
   const data = (await resp.json()) as { data: Record<string, ItemData> };
 
   if (cache) {
@@ -87,6 +96,9 @@ export async function getChampions(
   const resp = await fetch(
     `${DDRAGON_BASE}/cdn/${version}/data/en_US/champion.json`
   );
+  if (!resp.ok) {
+    throw new Error(`Failed to fetch DDragon champions: ${resp.status}`);
+  }
   const data = (await resp.json()) as { data: Record<string, ChampionData> };
 
   if (cache) {
@@ -110,6 +122,9 @@ export async function getSummonerSpells(
   const resp = await fetch(
     `${DDRAGON_BASE}/cdn/${version}/data/en_US/summoner.json`
   );
+  if (!resp.ok) {
+    throw new Error(`Failed to fetch DDragon spells: ${resp.status}`);
+  }
   const data = (await resp.json()) as {
     data: Record<string, { name: string; description: string }>;
   };

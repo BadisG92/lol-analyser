@@ -227,6 +227,7 @@ export const SPELL_NAME_TO_KEY: Record<string, string> = {
   "Cleanse": "SummonerBoost",
   "Smite": "SummonerSmite",
   "Mark": "SummonerSnowball",
+  "Snowball": "SummonerSnowball",
 };
 
 /**

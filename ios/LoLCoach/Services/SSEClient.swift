@@ -116,8 +116,11 @@ enum SSEClient {
                                 .trimmingCharacters(in: .whitespaces)
 
                         } else if line.hasPrefix("data:") {
-                            let value = String(line.dropFirst("data:".count))
-                                .trimmingCharacters(in: .init(charactersIn: " "))
+                            // Per SSE spec: strip one leading space after "data:" if present
+                            var value = String(line.dropFirst("data:".count))
+                            if value.hasPrefix(" ") {
+                                value = String(value.dropFirst())
+                            }
                             dataBuffer.append(value)
 
                         } else if line.hasPrefix("retry:") {

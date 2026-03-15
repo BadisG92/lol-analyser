@@ -54,6 +54,12 @@ export interface GameSession {
   player_rank: string;
   players_blue: PlayerEnriched[];
   players_red: PlayerEnriched[];
+  /** Serialized OP.GG data for all 10 players, keyed by player name.
+   *  Stored at init so mid-game analyses can reuse it without re-fetching. */
+  player_data?: Record<string, {
+    summoner: { raw: string; rank: string; winRate: number; gamesPlayed: number };
+    build: { raw: string };
+  }>;
   analyses: ScreenshotAnalysis[];
   created_at: number;
 }

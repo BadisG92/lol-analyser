@@ -8,36 +8,63 @@ function detectGamePhase(minutes: number): GamePhase {
   return "late";
 }
 
+/** Extract item name from either a string or an enriched {name, icon} object. */
+function itemName(item: unknown): string | null {
+  if (typeof item === "string") return item || null;
+  if (item && typeof item === "object" && "name" in item) {
+    const name = (item as { name: string | null }).name;
+    return name || null;
+  }
+  return null;
+}
+
 function formatExtraction(extraction: TabScreenExtraction): string {
   const lines: string[] = [];
-  lines.push(`Temps: ${extraction.game_time_minutes} minutes`);
-  lines.push(`Score: Blue ${extraction.blue_team.kills} - ${extraction.red_team.kills} Red`);
+  // Cast through unknown to support both snake_case (raw) and camelCase (enriched) shapes
+  const ext = extraction as unknown as Record<string, unknown>;
+  const gameTime = ext.game_time_minutes ?? ext.gameTimeMinutes ?? 0;
+  lines.push(`Temps: ${gameTime} minutes`);
+
+  const blueTeam = ext.blue_team ?? ext.blueTeam;
+  const redTeam = ext.red_team ?? ext.redTeam;
+
+  // Use type-safe references (handle both raw and enriched extraction shapes)
+  const blue = blueTeam as TabScreenExtraction["blue_team"];
+  const red = redTeam as TabScreenExtraction["red_team"];
+
+  lines.push(`Score: Blue ${blue.kills} - ${red.kills} Red`);
 
   // Objectives
   const blueObj: string[] = [];
-  if (extraction.blue_team.drakes.length) blueObj.push(`Drakes: ${extraction.blue_team.drakes.join(", ")}`);
-  if (extraction.blue_team.grubs) blueObj.push(`Grubs: ${extraction.blue_team.grubs}`);
-  if (extraction.blue_team.herald) blueObj.push("Herald");
-  if (extraction.blue_team.baron) blueObj.push("BARON");
+  if (blue.drakes?.length) blueObj.push(`Drakes: ${blue.drakes.join(", ")}`);
+  if (blue.grubs) blueObj.push(`Grubs: ${blue.grubs}`);
+  if (blue.herald) blueObj.push("Herald");
+  if (blue.baron) blueObj.push("BARON");
   lines.push(`Blue objectifs: ${blueObj.join(" | ") || "aucun"}`);
 
   const redObj: string[] = [];
-  if (extraction.red_team.drakes.length) redObj.push(`Drakes: ${extraction.red_team.drakes.join(", ")}`);
-  if (extraction.red_team.grubs) redObj.push(`Grubs: ${extraction.red_team.grubs}`);
-  if (extraction.red_team.herald) redObj.push("Herald");
-  if (extraction.red_team.baron) redObj.push("BARON");
+  if (red.drakes?.length) redObj.push(`Drakes: ${red.drakes.join(", ")}`);
+  if (red.grubs) redObj.push(`Grubs: ${red.grubs}`);
+  if (red.herald) redObj.push("Herald");
+  if (red.baron) redObj.push("BARON");
   lines.push(`Red objectifs: ${redObj.join(" | ") || "aucun"}`);
 
-  lines.push(`Tours détruites: Blue ${extraction.blue_team.towers_destroyed} - ${extraction.red_team.towers_destroyed} Red`);
+  lines.push(`Tours détruites: Blue ${blue.towers_destroyed ?? 0} - ${red.towers_destroyed ?? 0} Red`);
 
   lines.push("\nBLUE TEAM:");
-  for (const p of extraction.blue_team.players) {
-    lines.push(`  ${p.estimated_role.toUpperCase()} | ${p.champion} (Lv${p.level}) | ${p.name} | ${p.kills}/${p.deaths}/${p.assists} | ${p.cs} CS | Items: ${p.items.filter(Boolean).join(", ") || "none"}`);
+  for (const p of blue.players) {
+    const pr = p as unknown as Record<string, unknown>;
+    const role = ((pr.estimated_role ?? pr.estimatedRole ?? "?") as string);
+    const items = (p.items as unknown[]).map(itemName).filter(Boolean).join(", ") || "none";
+    lines.push(`  ${role.toUpperCase()} | ${p.champion} (Lv${p.level}) | ${p.name} | ${p.kills}/${p.deaths}/${p.assists} | ${p.cs} CS | Items: ${items}`);
   }
 
   lines.push("\nRED TEAM:");
-  for (const p of extraction.red_team.players) {
-    lines.push(`  ${p.estimated_role.toUpperCase()} | ${p.champion} (Lv${p.level}) | ${p.name} | ${p.kills}/${p.deaths}/${p.assists} | ${p.cs} CS | Items: ${p.items.filter(Boolean).join(", ") || "none"}`);
+  for (const p of red.players) {
+    const pr = p as unknown as Record<string, unknown>;
+    const role = ((pr.estimated_role ?? pr.estimatedRole ?? "?") as string);
+    const items = (p.items as unknown[]).map(itemName).filter(Boolean).join(", ") || "none";
+    lines.push(`  ${role.toUpperCase()} | ${p.champion} (Lv${p.level}) | ${p.name} | ${p.kills}/${p.deaths}/${p.assists} | ${p.cs} CS | Items: ${items}`);
   }
 
   if (extraction.minimap_observations) {
