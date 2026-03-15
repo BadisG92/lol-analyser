@@ -84,7 +84,7 @@ function formatPlayerData(
   for (const [name, data] of players) {
     lines.push(`${name}: ${data.summoner.rank} | WR ${data.summoner.winRate}% | ${data.summoner.gamesPlayed} games`);
   }
-  return lines.join("\n");
+  return lines.length > 0 ? lines.join("\n") : "Aucune donnée de joueur disponible.";
 }
 
 function formatBuildRecommendation(
