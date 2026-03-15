@@ -573,7 +573,7 @@ struct GameView: View {
         guard let item else { return }
         guard let data = try? await item.loadTransferable(type: Data.self),
               let image = UIImage(data: data) else {
-            // Reset so the user can retry the same image
+            gameViewModel.error = "Impossible de charger l'image sélectionnée."
             selectedItem = nil
             return
         }
