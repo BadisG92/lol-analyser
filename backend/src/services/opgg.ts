@@ -100,7 +100,11 @@ class OPGGClient {
     const result = (await this.rpc("tools/call", {
       name,
       arguments: args,
-    })) as MCPToolResult;
+    })) as MCPToolResult | null;
+
+    if (!result || !result.content) {
+      return "";
+    }
 
     return result.content
       .filter((c) => c.type === "text" && c.text)

@@ -204,12 +204,17 @@ export const ITEM_NAME_TO_ID: Record<string, number> = {
   "Bounty of Worlds": 3867,
 };
 
+// Pre-compute lowercase lookup maps for case-insensitive matching
+const ITEM_NAME_TO_ID_LOWER: Record<string, number> = Object.fromEntries(
+  Object.entries(ITEM_NAME_TO_ID).map(([k, v]) => [k.toLowerCase(), v])
+);
+
 /**
- * Get the DDragon image URL for an item by name.
+ * Get the DDragon image URL for an item by name (case-insensitive).
  * Returns null if the item name is not in our mapping.
  */
 export function getItemImageUrl(itemName: string, patch = CURRENT_PATCH): string | null {
-  const id = ITEM_NAME_TO_ID[itemName];
+  const id = ITEM_NAME_TO_ID[itemName] ?? ITEM_NAME_TO_ID_LOWER[itemName.toLowerCase()];
   if (!id) return null;
   return itemIconUrl(id, patch);
 }
@@ -230,11 +235,15 @@ export const SPELL_NAME_TO_KEY: Record<string, string> = {
   "Snowball": "SummonerSnowball",
 };
 
+const SPELL_NAME_TO_KEY_LOWER: Record<string, string> = Object.fromEntries(
+  Object.entries(SPELL_NAME_TO_KEY).map(([k, v]) => [k.toLowerCase(), v])
+);
+
 /**
- * Get the DDragon image URL for a summoner spell by its display name.
+ * Get the DDragon image URL for a summoner spell by its display name (case-insensitive).
  */
 export function getSpellImageUrl(spellName: string, patch = CURRENT_PATCH): string | null {
-  const key = SPELL_NAME_TO_KEY[spellName];
+  const key = SPELL_NAME_TO_KEY[spellName] ?? SPELL_NAME_TO_KEY_LOWER[spellName.toLowerCase()];
   if (!key) return null;
   return spellIconUrl(key, patch);
 }

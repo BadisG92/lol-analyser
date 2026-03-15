@@ -47,6 +47,10 @@ export async function addAnalysis(
   }
 
   session.analyses.push(analysis);
+  // Cap at 50 analyses to prevent KV size limit issues (25 MiB max)
+  if (session.analyses.length > 50) {
+    session.analyses = session.analyses.slice(-50);
+  }
   await saveSession(kv, session);
   return session;
 }

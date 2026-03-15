@@ -11,6 +11,7 @@ import {
 } from "../services/coach";
 import { saveSession, getSession, addAnalysis, addUserSession } from "../services/cache";
 import { championIconUrl, getItemImageUrl, getSpellImageUrl, CURRENT_PATCH } from "../data/ddragon";
+import { findChampion } from "../data/champions";
 
 const game = new Hono<{ Bindings: Env }>();
 
@@ -477,7 +478,7 @@ function enrichExtraction(extraction: TabScreenExtraction): EnrichedExtraction {
     return players.map((p) => ({
       name: p.name,
       champion: p.champion,
-      champion_icon: championIconUrl(p.champion),
+      champion_icon: championIconUrl(findChampion(p.champion)?.id ?? p.champion),
       level: p.level,
       kills: p.kills,
       deaths: p.deaths,
