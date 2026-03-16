@@ -10,7 +10,7 @@
 const DDRAGON_CDN = "https://ddragon.leagueoflegends.com/cdn";
 
 /** Current patch version — update on new patches or fetch dynamically via game-data.ts */
-export const CURRENT_PATCH = "26.5.1";
+export const CURRENT_PATCH = "16.5.1";
 
 // ── URL Builders ──
 
@@ -54,9 +54,9 @@ export const ITEM_NAME_TO_ID: Record<string, number> = {
   "Phantom Dancer": 3046,
   "Rapid Firecannon": 3094,
   "Statikk Shiv": 3087,
-  "Stormrazor": 3095,
-  "Fiendhunter Bolts": 8024,
-  "Hexoptics C44": 8025,
+  "Stormrazor": 3097,
+  "Fiendhunter Bolts": 2512,
+  "Hexoptics C44": 2523,
   "Runaan's Hurricane": 3085,
   "Blade of the Ruined King": 3153,
   "Wit's End": 3091,
@@ -73,7 +73,7 @@ export const ITEM_NAME_TO_ID: Record<string, number> = {
   "Voltaic Cyclosword": 6698,
   "Profane Hydra": 6700,
   "Eclipse": 6701,
-  "Bastionbreaker": 8023,
+  "Bastionbreaker": 2520,
 
   // AD / Bruiser
   "Ravenous Hydra": 3074,
@@ -88,7 +88,7 @@ export const ITEM_NAME_TO_ID: Record<string, number> = {
   "Stridebreaker": 6631,
   "Experimental Hexplate": 2501,
   "Sundered Sky": 6610,
-  "Endless Hunger": 8022,
+  "Endless Hunger": 2517,
 
   // AP
   "Rabadon's Deathcap": 3089,
@@ -112,9 +112,9 @@ export const ITEM_NAME_TO_ID: Record<string, number> = {
   "Riftmaker": 4633,
   "Blackfire Torch": 4648,
   "Bloodletter's Curse": 8010,
-  "Hextech Gunblade": 3146,
-  "Actualizer": 8020,
-  "Dusk and Dawn": 8021,
+  "Hextech Gunblade": 223146,
+  "Actualizer": 2522,
+  "Dusk and Dawn": 2510,
 
   // Tank / Armor
   "Sunfire Aegis": 3068,
@@ -136,7 +136,7 @@ export const ITEM_NAME_TO_ID: Record<string, number> = {
   // Tank / Health
   "Heartsteel": 3084,
   "Warmog's Armor": 3083,
-  "Protoplasm Harness": 8026,
+  "Protoplasm Harness": 2525,
 
   // Support
   "Redemption": 3107,
@@ -155,9 +155,9 @@ export const ITEM_NAME_TO_ID: Record<string, number> = {
   "Celestial Opposition": 3869,
   "Bloodsong": 3877,
   "Zaz'Zak's Realmspike": 3871,
-  "Bandlepipes": 8027,
-  "Whispering Circlet": 8028,
-  "Diadem of Songs": 8029,
+  "Bandlepipes": 2524,
+  "Whispering Circlet": 2526,
+  "Diadem of Songs": 2530,
   "Solstice Sleigh": 3868,
 
   // Boots

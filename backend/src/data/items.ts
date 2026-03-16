@@ -52,7 +52,7 @@ export const ITEMS: ItemRef[] = [
   { name: "Runaan's Hurricane", gold: 2600, category: "ad_crit", visual: "green bow with wind effects" },
   { name: "Blade of the Ruined King", gold: 3200, category: "ad_crit", visual: "black sword with red runes" },
   { name: "Fiendhunter Bolts", gold: 2650, category: "ad_crit", visual: "crossbow bolts with demonic glow" },
-  { name: "Hexoptics C44", gold: 3000, category: "ad_crit", visual: "hextech long-range scope device" },
+  { name: "Hexoptics C44", gold: 2800, category: "ad_crit", visual: "hextech long-range scope device" },
   { name: "Wit's End", gold: 2800, category: "attack_speed", visual: "curved purple dagger" },
   { name: "Terminus", gold: 3000, category: "attack_speed", visual: "dual-colored blade (light/dark)" },
   { name: "Guinsoo's Rageblade", gold: 2800, category: "attack_speed", visual: "orange/red curved blade" },
@@ -82,7 +82,7 @@ export const ITEMS: ItemRef[] = [
   { name: "Stridebreaker", gold: 3000, category: "ad_bruiser", visual: "morning star chain weapon" },
   { name: "Experimental Hexplate", gold: 2800, category: "ad_bruiser", visual: "hextech chest plate" },
   { name: "Sundered Sky", gold: 3100, category: "ad_bruiser", visual: "cracked golden sword" },
-  { name: "Endless Hunger", gold: 3200, category: "ad_bruiser", visual: "monstrous jaw with omnivamp aura" },
+  { name: "Endless Hunger", gold: 3100, category: "ad_bruiser", visual: "monstrous jaw with omnivamp aura" },
 
   // ── AP ──
   { name: "Rabadon's Deathcap", gold: 3600, category: "ap", visual: "large purple wizard hat" },
@@ -106,9 +106,9 @@ export const ITEMS: ItemRef[] = [
   { name: "Riftmaker", gold: 2800, category: "ap", visual: "void-touched purple orb with rift crack" },
   { name: "Blackfire Torch", gold: 2800, category: "ap", visual: "dark torch with black flame" },
   { name: "Bloodletter's Curse", gold: 2800, category: "ap", visual: "dark red cursed tome with blood drops" },
-  { name: "Hextech Gunblade", gold: 3000, category: "ap", visual: "hextech pistol-blade hybrid" },
-  { name: "Actualizer", gold: 3100, category: "ap", visual: "glowing arcane activator device" },
-  { name: "Dusk and Dawn", gold: 3000, category: "ap", visual: "dual-toned blade (light and dark halves)" },
+  { name: "Hextech Gunblade", gold: 2500, category: "ap", visual: "hextech pistol-blade hybrid" },
+  { name: "Actualizer", gold: 2800, category: "ap", visual: "glowing arcane activator device" },
+  { name: "Dusk and Dawn", gold: 3100, category: "ap", visual: "dual-toned blade (light and dark halves)" },
 
   // ── Tank / Armor ──
   { name: "Sunfire Aegis", gold: 2700, category: "tank_armor", visual: "flaming red/orange shield" },
@@ -146,7 +146,7 @@ export const ITEMS: ItemRef[] = [
   { name: "Dawncore", gold: 2700, category: "support", visual: "radiant golden core" },
   { name: "Imperial Mandate", gold: 2200, category: "support", visual: "purple/gold commanding scepter" },
   { name: "Trailblazer", gold: 2200, category: "support", visual: "shuriman traveler's pack" },
-  { name: "Bandlepipes", gold: 2000, category: "support", visual: "yordle musical pipes" },
+  { name: "Bandlepipes", gold: 2300, category: "support", visual: "yordle musical pipes" },
   { name: "Whispering Circlet", gold: 2250, category: "support", visual: "enchanted silver circlet" },
   { name: "Diadem of Songs", gold: 2250, category: "support", visual: "golden musical crown (evolved circlet)" },
 
