@@ -106,6 +106,7 @@ export const ITEM_NAME_TO_ID: Record<string, number> = {
   "Cosmic Drive": 4629,
   "Riftmaker": 4633,
   "Blackfire Torch": 4648,
+  "Bloodletter's Curse": 8010,
 
   // Tank / Armor
   "Sunfire Aegis": 3068,
@@ -189,7 +190,6 @@ export const ITEM_NAME_TO_ID: Record<string, number> = {
   "Bami's Cinder": 6660,
   "Kindlegem": 3067,
   "Catalyst of Aeons": 3803,
-  "Kircheis Shard": 2015,
 
   // Wards/Trinkets
   "Stealth Ward": 3340,
