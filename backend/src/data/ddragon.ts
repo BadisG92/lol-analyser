@@ -54,7 +54,6 @@ export const ITEM_NAME_TO_ID: Record<string, number> = {
   "Phantom Dancer": 3046,
   "Rapid Firecannon": 3094,
   "Statikk Shiv": 3087,
-  "Stormrazor": 3095,
   "Runaan's Hurricane": 3085,
   "Blade of the Ruined King": 3153,
   "Wit's End": 3091,

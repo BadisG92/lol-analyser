@@ -18,6 +18,7 @@ export interface ItemRef {
 
 export type ItemCategory =
   | "ad_crit"
+  | "ad_bruiser"
   | "ad_lethality"
   | "ap"
   | "attack_speed"
@@ -37,7 +38,7 @@ export type ItemCategory =
 export const ITEMS: ItemRef[] = [
   // ── AD / Crit ──
   { name: "Infinity Edge", gold: 3400, category: "ad_crit", visual: "large blue/gold sword" },
-  { name: "Kraken Slayer", gold: 3100, category: "ad_crit", visual: "golden trident crossbow" },
+  { name: "Kraken Slayer", gold: 3000, category: "ad_crit", visual: "golden trident crossbow" },
   { name: "Bloodthirster", gold: 3200, category: "ad_crit", visual: "red-bladed greatsword" },
   { name: "Lord Dominik's Regards", gold: 3000, category: "ad_crit", visual: "golden heavy crossbow" },
   { name: "Mortal Reminder", gold: 3000, category: "ad_crit", visual: "golden sword with green hilt" },
@@ -47,7 +48,6 @@ export const ITEMS: ItemRef[] = [
   { name: "Phantom Dancer", gold: 2600, category: "ad_crit", visual: "pair of curved daggers" },
   { name: "Rapid Firecannon", gold: 2500, category: "ad_crit", visual: "golden cannon/crossbow" },
   { name: "Statikk Shiv", gold: 2600, category: "ad_crit", visual: "electrified dagger" },
-  { name: "Stormrazor", gold: 2700, category: "ad_crit", visual: "lightning-infused sword" },
   { name: "Runaan's Hurricane", gold: 2600, category: "ad_crit", visual: "green bow with wind effects" },
   { name: "Blade of the Ruined King", gold: 3200, category: "ad_crit", visual: "black sword with red runes" },
   { name: "Wit's End", gold: 2800, category: "attack_speed", visual: "curved purple dagger" },
@@ -66,18 +66,18 @@ export const ITEMS: ItemRef[] = [
   { name: "Eclipse", gold: 2800, category: "ad_lethality", visual: "dark crescent sword with glow" },
 
   // ── AD / Fighter / Bruiser ──
-  { name: "Ravenous Hydra", gold: 3300, category: "ad_crit", visual: "red three-headed axe" },
-  { name: "Titanic Hydra", gold: 3300, category: "ad_crit", visual: "teal/green three-headed axe" },
-  { name: "Black Cleaver", gold: 3000, category: "ad_crit", visual: "black and red axe" },
-  { name: "Trinity Force", gold: 3333, category: "ad_crit", visual: "three-pronged golden weapon" },
-  { name: "Spear of Shojin", gold: 3100, category: "ad_crit", visual: "ornate eastern spear" },
-  { name: "Death's Dance", gold: 3100, category: "ad_crit", visual: "twin red scythes" },
-  { name: "Maw of Malmortius", gold: 2800, category: "ad_crit", visual: "purple jaw-shaped blade" },
-  { name: "Sterak's Gage", gold: 3100, category: "ad_crit", visual: "large armored gauntlet" },
-  { name: "Hullbreaker", gold: 2800, category: "ad_crit", visual: "heavy anchor/battering ram" },
-  { name: "Stridebreaker", gold: 3000, category: "ad_crit", visual: "morning star chain weapon" },
-  { name: "Experimental Hexplate", gold: 2800, category: "ad_crit", visual: "hextech chest plate" },
-  { name: "Sundered Sky", gold: 3100, category: "ad_crit", visual: "cracked golden sword" },
+  { name: "Ravenous Hydra", gold: 3300, category: "ad_bruiser", visual: "red three-headed axe" },
+  { name: "Titanic Hydra", gold: 3300, category: "ad_bruiser", visual: "teal/green three-headed axe" },
+  { name: "Black Cleaver", gold: 3000, category: "ad_bruiser", visual: "black and red axe" },
+  { name: "Trinity Force", gold: 3333, category: "ad_bruiser", visual: "three-pronged golden weapon" },
+  { name: "Spear of Shojin", gold: 3100, category: "ad_bruiser", visual: "ornate eastern spear" },
+  { name: "Death's Dance", gold: 3100, category: "ad_bruiser", visual: "twin red scythes" },
+  { name: "Maw of Malmortius", gold: 2800, category: "ad_bruiser", visual: "purple jaw-shaped blade" },
+  { name: "Sterak's Gage", gold: 3100, category: "ad_bruiser", visual: "large armored gauntlet" },
+  { name: "Hullbreaker", gold: 2800, category: "ad_bruiser", visual: "heavy anchor/battering ram" },
+  { name: "Stridebreaker", gold: 3000, category: "ad_bruiser", visual: "morning star chain weapon" },
+  { name: "Experimental Hexplate", gold: 2800, category: "ad_bruiser", visual: "hextech chest plate" },
+  { name: "Sundered Sky", gold: 3100, category: "ad_bruiser", visual: "cracked golden sword" },
 
   // ── AP ──
   { name: "Rabadon's Deathcap", gold: 3600, category: "ap", visual: "large purple wizard hat" },
@@ -217,7 +217,8 @@ export function buildItemReferenceForExtraction(): string {
   }
 
   const categoryLabels: Record<string, string> = {
-    ad_crit: "AD / Crit / Fighter",
+    ad_crit: "AD / Crit",
+    ad_bruiser: "AD / Fighter / Bruiser",
     ad_lethality: "AD / Lethality (Assassin)",
     ap: "AP (Mage)",
     attack_speed: "Attack Speed / On-Hit",
@@ -233,7 +234,7 @@ export function buildItemReferenceForExtraction(): string {
 
   const lines: string[] = ["RÉFÉRENCE ITEMS (PATCH ACTUEL) :"];
   const displayOrder: ItemCategory[] = [
-    "ad_crit", "ad_lethality", "ap", "attack_speed",
+    "ad_crit", "ad_bruiser", "ad_lethality", "ap", "attack_speed",
     "tank_armor", "tank_mr", "tank_health",
     "support", "boots", "jungle", "starter", "component",
   ];

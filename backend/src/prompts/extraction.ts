@@ -15,9 +15,15 @@ export function buildExtractionPrompt(): string {
 
 INSTRUCTIONS :
 - Extrais TOUTES les informations visibles en JSON strict
-- Les équipes sont Blue (gauche) et Red (droite)
-- Le temps de jeu est en haut au centre
-- Les objectifs (drakes, grubs, tours) sont visibles via des icônes
+- Le scoreboard affiche TON ÉQUIPE EN HAUT et L'ÉQUIPE ADVERSE EN BAS
+- Identifie Blue vs Red par les couleurs des frames (bleu = Blue side, rouge = Red side)
+- Colonnes par joueur (gauche → droite) : Portrait champion → Summoner spells → Nom → KDA → CS → Ward → 6 Items
+- Le temps de jeu est visible en haut au centre (HUD permanent)
+- Drakes : icônes colorées par type (rouge=infernal, marron=mountain, bleu=ocean, blanc=cloud, violet=hextech, vert=chemtech)
+- Tours détruites : visibles sur la minimap (icônes creuses), pas en compteur sur le scoreboard
+- Grubs : compteur de stacks de buff (pas d'icône proéminente)
+- Baron : buff violet visible sur les portraits des joueurs affectés
+- Herald : icône spéciale dans l'inventaire du porteur
 - Pour les items, identifie-les par leur icône EN UTILISANT la référence ci-dessous
 - Si un élément n'est pas lisible avec certitude, utilise null (PAS de guess)
 - Pour les champions, base-toi sur le portrait ET la position dans la liste
