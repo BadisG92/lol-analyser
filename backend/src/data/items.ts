@@ -1,5 +1,5 @@
 /**
- * Static item reference — Season 15 (Patch 15.x)
+ * Static item reference — Season 2026 (Patch 26.x)
  *
  * Run `npx tsx scripts/sync-game-data.ts` to refresh from DDragon.
  * Organized by category for the extraction prompt.
@@ -37,19 +37,22 @@ export type ItemCategory =
 
 export const ITEMS: ItemRef[] = [
   // ── AD / Crit ──
-  { name: "Infinity Edge", gold: 3400, category: "ad_crit", visual: "large blue/gold sword" },
-  { name: "Kraken Slayer", gold: 3000, category: "ad_crit", visual: "golden trident crossbow" },
+  { name: "Infinity Edge", gold: 3500, category: "ad_crit", visual: "large blue/gold sword" },
+  { name: "Kraken Slayer", gold: 3000, category: "attack_speed", visual: "golden trident crossbow" },
   { name: "Bloodthirster", gold: 3200, category: "ad_crit", visual: "red-bladed greatsword" },
   { name: "Lord Dominik's Regards", gold: 3000, category: "ad_crit", visual: "golden heavy crossbow" },
   { name: "Mortal Reminder", gold: 3000, category: "ad_crit", visual: "red jagged sword with crimson glow" },
   { name: "Navori Quickblades", gold: 3400, category: "ad_crit", visual: "dual silver blades" },
-  { name: "Essence Reaver", gold: 2900, category: "ad_crit", visual: "purple/gold sword with gem" },
+  { name: "Essence Reaver", gold: 3050, category: "ad_crit", visual: "purple/gold sword with gem" },
   { name: "The Collector", gold: 3000, category: "ad_crit", visual: "ornate golden pistol" },
   { name: "Phantom Dancer", gold: 2600, category: "ad_crit", visual: "pair of crossed spectral swords" },
   { name: "Rapid Firecannon", gold: 2500, category: "ad_crit", visual: "golden cannon/crossbow" },
   { name: "Statikk Shiv", gold: 2600, category: "ad_crit", visual: "electrified dagger" },
+  { name: "Stormrazor", gold: 3200, category: "ad_crit", visual: "lightning-infused energized sword" },
   { name: "Runaan's Hurricane", gold: 2600, category: "ad_crit", visual: "green bow with wind effects" },
   { name: "Blade of the Ruined King", gold: 3200, category: "ad_crit", visual: "black sword with red runes" },
+  { name: "Fiendhunter Bolts", gold: 2650, category: "ad_crit", visual: "crossbow bolts with demonic glow" },
+  { name: "Hexoptics C44", gold: 3000, category: "ad_crit", visual: "hextech long-range scope device" },
   { name: "Wit's End", gold: 2800, category: "attack_speed", visual: "curved purple dagger" },
   { name: "Terminus", gold: 3000, category: "attack_speed", visual: "dual-colored blade (light/dark)" },
   { name: "Guinsoo's Rageblade", gold: 2800, category: "attack_speed", visual: "orange/red curved blade" },
@@ -64,6 +67,7 @@ export const ITEMS: ItemRef[] = [
   { name: "Voltaic Cyclosword", gold: 2900, category: "ad_lethality", visual: "electric circular blade" },
   { name: "Profane Hydra", gold: 3300, category: "ad_lethality", visual: "dark three-headed axe" },
   { name: "Eclipse", gold: 2800, category: "ad_lethality", visual: "dark crescent sword with glow" },
+  { name: "Bastionbreaker", gold: 3200, category: "ad_lethality", visual: "siege battering ram weapon" },
 
   // ── AD / Fighter / Bruiser ──
   { name: "Ravenous Hydra", gold: 3300, category: "ad_bruiser", visual: "red three-headed axe" },
@@ -78,6 +82,7 @@ export const ITEMS: ItemRef[] = [
   { name: "Stridebreaker", gold: 3000, category: "ad_bruiser", visual: "morning star chain weapon" },
   { name: "Experimental Hexplate", gold: 2800, category: "ad_bruiser", visual: "hextech chest plate" },
   { name: "Sundered Sky", gold: 3100, category: "ad_bruiser", visual: "cracked golden sword" },
+  { name: "Endless Hunger", gold: 3200, category: "ad_bruiser", visual: "monstrous jaw with omnivamp aura" },
 
   // ── AP ──
   { name: "Rabadon's Deathcap", gold: 3600, category: "ap", visual: "large purple wizard hat" },
@@ -101,6 +106,9 @@ export const ITEMS: ItemRef[] = [
   { name: "Riftmaker", gold: 2800, category: "ap", visual: "void-touched purple orb with rift crack" },
   { name: "Blackfire Torch", gold: 2800, category: "ap", visual: "dark torch with black flame" },
   { name: "Bloodletter's Curse", gold: 2800, category: "ap", visual: "dark red cursed tome with blood drops" },
+  { name: "Hextech Gunblade", gold: 3000, category: "ap", visual: "hextech pistol-blade hybrid" },
+  { name: "Actualizer", gold: 3100, category: "ap", visual: "glowing arcane activator device" },
+  { name: "Dusk and Dawn", gold: 3000, category: "ap", visual: "dual-toned blade (light and dark halves)" },
 
   // ── Tank / Armor ──
   { name: "Sunfire Aegis", gold: 2700, category: "tank_armor", visual: "flaming red/orange shield" },
@@ -122,6 +130,7 @@ export const ITEMS: ItemRef[] = [
   // ── Tank / Health ──
   { name: "Heartsteel", gold: 3000, category: "tank_health", visual: "large red crystal heart" },
   { name: "Warmog's Armor", gold: 3000, category: "tank_health", visual: "organic red armor/heart" },
+  { name: "Protoplasm Harness", gold: 2500, category: "tank_health", visual: "oozing green protoplasm chestpiece" },
 
   // ── Support ──
   { name: "Redemption", gold: 2100, category: "support", visual: "golden cross/star" },
@@ -137,6 +146,9 @@ export const ITEMS: ItemRef[] = [
   { name: "Dawncore", gold: 2700, category: "support", visual: "radiant golden core" },
   { name: "Imperial Mandate", gold: 2200, category: "support", visual: "purple/gold commanding scepter" },
   { name: "Trailblazer", gold: 2200, category: "support", visual: "shuriman traveler's pack" },
+  { name: "Bandlepipes", gold: 2000, category: "support", visual: "yordle musical pipes" },
+  { name: "Whispering Circlet", gold: 2250, category: "support", visual: "enchanted silver circlet" },
+  { name: "Diadem of Songs", gold: 2250, category: "support", visual: "golden musical crown (evolved circlet)" },
 
   // ── Boots ──
   { name: "Berserker's Greaves", gold: 1100, category: "boots", visual: "red/brown attack speed boots" },
@@ -145,8 +157,6 @@ export const ITEMS: ItemRef[] = [
   { name: "Mercury's Treads", gold: 1100, category: "boots", visual: "green-winged boots" },
   { name: "Ionian Boots of Lucidity", gold: 900, category: "boots", visual: "blue CDR boots" },
   { name: "Boots of Swiftness", gold: 900, category: "boots", visual: "white winged boots" },
-  { name: "Symbiotic Soles", gold: 1000, category: "boots", visual: "organic living boots" },
-  { name: "Synchronized Souls", gold: 1100, category: "boots", visual: "connected twin boots" },
 
   // ── Starter Items ──
   { name: "Doran's Blade", gold: 450, category: "starter", visual: "small red sword" },
